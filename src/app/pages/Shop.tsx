@@ -11,10 +11,19 @@ export function Shop() {
   const navigate = useNavigate();
   const [filter, setFilter] = useState<'all' | 'sticker' | 'keychain' | 'set'>('all');
   
-  const filteredProducts = filter === 'all'
-    ? products
-    : products.filter((p) => p.category === filter);
-  
+  const getSortedProducts = () => {
+    const filtered = filter === 'all'
+      ? [...products] 
+      : products.filter((p) => p.category === filter);
+    
+    return filtered.sort((a, b) => {
+      if (a.inStock === b.inStock) return 0;
+      return a.inStock ? -1 : 1;
+    });
+  };
+
+  const filteredProducts = getSortedProducts();
+
   const categories = [
     { value: 'all' as const, label: 'All' },
     { value: 'sticker' as const, label: 'Stickers' },

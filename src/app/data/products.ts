@@ -52,7 +52,7 @@ export const products: Product[] = [
     category: 'set',
     image: 'https://images.unsplash.com/photo-1764344814867-d7a6916e1a37?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxjdXRlJTIwc3RpY2tlcnMlMjBjb2xsZWN0aW9ufGVufDF8fHx8MTc2NjMzNjk1NXww&ixlib=rb-4.1.0&q=80&w=1080',
     description: 'A collection of 5 botanical stickers in soft pastel colors. Each one hand-illustrated.',
-    inStock: true,
+    inStock: false,
   },
   {
     id: 6,
