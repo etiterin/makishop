@@ -1,12 +1,16 @@
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion } from 'motion/react';
-import { ArrowLeft, MessageCircle } from 'lucide-react';
+import { ArrowLeft, MessageCircle, ShoppingCart } from 'lucide-react';
 import { ImageWithFallback } from '../components/figma/ImageWithFallback';
 import { products } from '../data/products';
+import { useCart } from '../context/CartContext';
+import { Button } from '../components/ui/button';
+import { toast } from 'sonner';
 
 export function ProductDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { addToCart } = useCart();
   
   const product = products.find((p) => p.id === Number(id));
   
@@ -25,6 +29,11 @@ export function ProductDetail() {
       </div>
     );
   }
+
+  const handleAddToCart = () => {
+      addToCart(product);
+      toast.success(`${product.name} added to cart`);
+  };
   
   return (
     <div className="min-h-screen pt-24 pb-20 px-6">
@@ -104,13 +113,26 @@ export function ProductDetail() {
                 </ul>
               </div>
               
-              <button
-                onClick={() => navigate('/contact')}
-                className="w-full bg-accent hover:bg-accent/80 text-accent-foreground px-8 py-4 rounded-full shadow-lg hover:shadow-xl transition-all duration-300 flex items-center justify-center gap-3 group"
-              >
-                <MessageCircle className="w-5 h-5" />
-                <span>Message to Order</span>
-              </button>
+              <div className="flex flex-col gap-3">
+                   <Button
+                    onClick={handleAddToCart}
+                    size="lg"
+                    className="w-full text-lg h-14 rounded-full shadow-lg"
+                  >
+                    <ShoppingCart className="w-5 h-5 mr-2" />
+                    Add to Cart
+                  </Button>
+                  
+                  <Button
+                    variant="outline"
+                    onClick={() => navigate('/contact')}
+                    size="lg"
+                    className="w-full text-lg h-14 rounded-full"
+                  >
+                    <MessageCircle className="w-5 h-5 mr-2" />
+                    Contact for Custom Order
+                  </Button>
+              </div>
               
               <p className="text-sm text-muted-foreground text-center">
                 Each item is made to order. Please allow 3-5 business days for creation.
