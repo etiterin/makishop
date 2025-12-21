@@ -3,6 +3,9 @@ import { motion } from 'motion/react';
 import { useNavigate } from 'react-router-dom';
 import { ImageWithFallback } from '../components/figma/ImageWithFallback';
 import { products, Product } from '../data/products';
+import { ShoppingCart } from 'lucide-react';
+import { useCart } from '../context/CartContext';
+import { toast } from 'sonner';
 
 export function Shop() {
   const navigate = useNavigate();
@@ -70,6 +73,13 @@ export function Shop() {
 
 function ProductCard({ product, index }: { product: Product; index: number }) {
   const navigate = useNavigate();
+  const { addToCart } = useCart();
+
+  const handleAddToCart = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    addToCart(product);
+    toast.success(`${product.name} added to cart`);
+  };
   
   return (
     <motion.div
@@ -78,7 +88,7 @@ function ProductCard({ product, index }: { product: Product; index: number }) {
       transition={{ delay: index * 0.05, duration: 0.6 }}
       whileHover={{ y: -8 }}
       onClick={() => navigate(`/product/${product.id}`)}
-      className="bg-card rounded-3xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 cursor-pointer group"
+      className="bg-card rounded-3xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 cursor-pointer group flex flex-col"
     >
       {/* Image */}
       <div className="aspect-square bg-gradient-to-br from-muted to-accent/10 overflow-hidden">
@@ -90,7 +100,7 @@ function ProductCard({ product, index }: { product: Product; index: number }) {
       </div>
       
       {/* Details */}
-      <div className="p-6 space-y-4">
+      <div className="p-6 flex flex-col flex-grow">
         <div className="flex items-start justify-between gap-2">
           <h3 className="flex-1 leading-snug">{product.name}</h3>
           <span className="px-3 py-1 bg-accent/20 text-accent-foreground rounded-full text-sm whitespace-nowrap">
@@ -98,17 +108,26 @@ function ProductCard({ product, index }: { product: Product; index: number }) {
           </span>
         </div>
         
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between mt-auto pt-4">
           <p className="text-2xl text-foreground">{product.price}</p>
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              navigate(`/product/${product.id}`);
-            }}
-            className="px-5 py-2 bg-accent hover:bg-accent/80 text-accent-foreground rounded-full transition-colors duration-200"
-          >
-            View
-          </button>
+          <div className="flex gap-2">
+             <button
+                onClick={handleAddToCart}
+                className="w-10 h-10 flex items-center justify-center bg-muted hover:bg-muted/80 text-foreground rounded-full transition-colors duration-200"
+                title="Add to Cart"
+              >
+                <ShoppingCart className="w-5 h-5" />
+              </button>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  navigate(`/product/${product.id}`);
+                }}
+                className="px-5 py-2 bg-accent hover:bg-accent/80 text-accent-foreground rounded-full transition-colors duration-200"
+              >
+                View
+              </button>
+          </div>
         </div>
       </div>
     </motion.div>

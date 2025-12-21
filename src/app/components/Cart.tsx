@@ -57,7 +57,7 @@ export const Cart = () => {
                     <p>Your cart is empty</p>
                 </div>
              ) : (
-                 <ScrollArea className="h-[calc(100vh-200px)] pr-4">
+                 <ScrollArea className="h-[calc(100vh-200px)] px-4">
                      <div className="space-y-4">
                          {cartItems.map((item) => (
                              <div key={item.id} className="flex gap-4 items-center border-b pb-4">
