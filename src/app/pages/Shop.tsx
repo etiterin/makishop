@@ -107,48 +107,57 @@ function ProductCard({ product, index }: { product: Product; index: number }) {
       transition={{ delay: index * 0.05, duration: 0.6 }}
       whileHover={{ y: -8 }}
       onClick={() => navigate(`/product/${product.id}`)}
-      className="bg-card rounded-3xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 cursor-pointer group flex flex-col"
+      className="bg-card rounded-3xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 group flex flex-col cursor-pointer"
     >
       {/* Image */}
       <div className="relative aspect-square bg-gradient-to-br from-muted to-accent/10 overflow-hidden">
         <ImageWithFallback
           src={product.image}
           alt={product.name}
-          className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+          className={`w-full h-full object-cover transition-transform duration-500 ${product.inStock ? 'group-hover:scale-110' : 'grayscale'}`}
         />
+        {!product.inStock && (
+             <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
+                <span className="text-white font-semibold tracking-wider text-lg bg-black/50 px-4 py-2 rounded-lg">Out of Stock</span>
+            </div>
+        )}
       </div>
       
       {/* Details */}
       <div className="p-6 flex flex-col flex-grow">
         <div className="flex items-start justify-between gap-2">
           <h3 className="flex-1 leading-snug">{product.name}</h3>
-          <span className="px-3 py-1 bg-accent/20 text-accent-foreground rounded-full text-sm whitespace-nowrap">
+          <span className={`px-3 py-1 rounded-full text-sm whitespace-nowrap ${!product.inStock ? 'bg-secondary text-secondary-foreground' : 'bg-accent/20 text-accent-foreground'}`}>
             {product.category}
           </span>
         </div>
         
         <div className="flex items-center justify-between mt-auto pt-4">
-          <p className="text-2xl text-foreground">{product.price}</p>
+          <p className={`text-2xl ${!product.inStock ? 'text-muted-foreground line-through' : 'text-foreground'}`}>{product.price}</p>
 
-          <div className="flex items-center justify-end">
-            {!itemInCart ? (
-                <button
-                    onClick={handleAddToCart}
-                    className="w-10 h-10 flex items-center justify-center bg-accent text-accent-foreground rounded-full transition-all duration-200"
-                    title="Add to Cart"
-                >
-                    <ShoppingCart className="w-5 h-5" />
-                </button>
+          <div className="flex items-center justify-end h-10">
+            {product.inStock ? (
+                 !itemInCart ? (
+                    <button
+                        onClick={handleAddToCart}
+                        className="w-10 h-10 flex items-center justify-center bg-accent text-accent-foreground rounded-full transition-all duration-200"
+                        title="Add to Cart"
+                    >
+                        <ShoppingCart className="w-5 h-5" />
+                    </button>
+                ) : (
+                    <div className="flex items-center gap-1 bg-background border rounded-full p-1">
+                        <button onClick={handleDecrease} className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-muted">
+                             {itemInCart.quantity === 1 ? <Trash2 className="w-4 h-4 text-destructive" /> : <Minus className="w-4 h-4" />}
+                        </button>
+                        <span className="w-8 text-center font-medium">{itemInCart.quantity}</span>
+                        <button onClick={handleIncrease} className="w-8 h-8 flex items-center justify-center bg-accent text-accent-foreground rounded-full">
+                            <Plus className="w-4 h-4" />
+                        </button>
+                    </div>
+                )
             ) : (
-                <div className="flex items-center gap-1 bg-background border rounded-full p-1">
-                    <button onClick={handleDecrease} className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-muted">
-                         {itemInCart.quantity === 1 ? <Trash2 className="w-4 h-4 text-destructive" /> : <Minus className="w-4 h-4" />}
-                    </button>
-                    <span className="w-8 text-center font-medium">{itemInCart.quantity}</span>
-                    <button onClick={handleIncrease} className="w-8 h-8 flex items-center justify-center bg-accent text-accent-foreground rounded-full">
-                        <Plus className="w-4 h-4" />
-                    </button>
-                </div>
+                <span className="text-sm text-destructive font-medium">Out of Stock</span>
             )}
           </div>
         </div>

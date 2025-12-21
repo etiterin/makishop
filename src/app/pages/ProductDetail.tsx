@@ -57,12 +57,17 @@ export function ProductDetail() {
             transition={{ duration: 0.6 }}
             className="space-y-6"
           >
-            <div className="aspect-square bg-card rounded-3xl overflow-hidden shadow-lg">
+            <div className="relative aspect-square bg-card rounded-3xl overflow-hidden shadow-lg">
               <ImageWithFallback
                 src={product.image}
                 alt={product.name}
-                className="w-full h-full object-cover"
+                className={`w-full h-full object-cover ${!product.inStock ? 'grayscale' : ''}`}
               />
+              {!product.inStock && (
+                <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
+                    <span className="text-white font-semibold tracking-wider text-lg bg-black/50 px-4 py-2 rounded-lg">Out of Stock</span>
+                </div>
+              )}
             </div>
             
             {/* Additional images placeholder */}
@@ -88,12 +93,12 @@ export function ProductDetail() {
             <div className="space-y-4">
               <div className="flex items-start justify-between gap-4">
                 <h1 className="text-4xl">{product.name}</h1>
-                <span className="px-4 py-2 bg-accent/20 text-accent-foreground rounded-full text-sm">
+                <span className={`px-4 py-2 rounded-full text-sm ${!product.inStock ? 'bg-secondary text-secondary-foreground' : 'bg-accent/20 text-accent-foreground'}`}>
                   {product.category}
                 </span>
               </div>
               
-              <p className="text-3xl text-accent-foreground">{product.price}</p>
+              <p className={`text-3xl ${!product.inStock ? 'text-muted-foreground line-through' : 'text-accent-foreground'}`}>{product.price}</p>
             </div>
             
             <div className="prose prose-lg">
@@ -114,14 +119,20 @@ export function ProductDetail() {
               </div>
               
               <div className="flex flex-col gap-3">
-                   <Button
-                    onClick={handleAddToCart}
-                    size="lg"
-                    className="w-full text-lg h-14 rounded-full shadow-lg"
-                  >
-                    <ShoppingCart className="w-5 h-5 mr-2" />
-                    Add to Cart
+                {product.inStock ? (
+                    <Button
+                      onClick={handleAddToCart}
+                      size="lg"
+                      className="w-full text-lg h-14 rounded-full shadow-lg"
+                    >
+                      <ShoppingCart className="w-5 h-5 mr-2" />
+                      Add to Cart
+                    </Button>
+                ) : (
+                  <Button size="lg" disabled className="w-full text-lg h-14 rounded-full">
+                    Out of Stock
                   </Button>
+                )}
                   
                   <Button
                     variant="outline"
