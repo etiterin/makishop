@@ -1,0 +1,116 @@
+import { useState } from 'react';
+import { motion } from 'motion/react';
+import { useNavigate } from 'react-router-dom';
+import { ImageWithFallback } from '../components/figma/ImageWithFallback';
+import { products, Product } from '../data/products';
+
+export function Shop() {
+  const navigate = useNavigate();
+  const [filter, setFilter] = useState<'all' | 'sticker' | 'keychain' | 'set'>('all');
+  
+  const filteredProducts = filter === 'all'
+    ? products
+    : products.filter((p) => p.category === filter);
+  
+  const categories = [
+    { value: 'all' as const, label: 'All' },
+    { value: 'sticker' as const, label: 'Stickers' },
+    { value: 'keychain' as const, label: 'Keychains' },
+    { value: 'set' as const, label: 'Sets' },
+  ];
+  
+  return (
+    <div className="min-h-screen pt-24 pb-20 px-6">
+      <div className="max-w-7xl mx-auto">
+        {/* Header */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6 }}
+          className="mb-12 text-center"
+        >
+          <h1 className="text-5xl mb-4">Our Collection</h1>
+          <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
+            Each piece is lovingly crafted by hand, making every item unique and special
+          </p>
+        </motion.div>
+        
+        {/* Filters */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2, duration: 0.6 }}
+          className="flex justify-center gap-3 mb-16"
+        >
+          {categories.map((cat) => (
+            <button
+              key={cat.value}
+              onClick={() => setFilter(cat.value)}
+              className={`px-6 py-3 rounded-full transition-all duration-200 ${
+                filter === cat.value
+                  ? 'bg-accent text-accent-foreground shadow-md'
+                  : 'bg-muted text-muted-foreground hover:bg-muted/80'
+              }`}
+            >
+              {cat.label}
+            </button>
+          ))}
+        </motion.div>
+        
+        {/* Product Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+          {filteredProducts.map((product, index) => (
+            <ProductCard key={product.id} product={product} index={index} />
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ProductCard({ product, index }: { product: Product; index: number }) {
+  const navigate = useNavigate();
+  
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: index * 0.05, duration: 0.6 }}
+      whileHover={{ y: -8 }}
+      onClick={() => navigate(`/product/${product.id}`)}
+      className="bg-card rounded-3xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 cursor-pointer group"
+    >
+      {/* Image */}
+      <div className="aspect-square bg-gradient-to-br from-muted to-accent/10 overflow-hidden">
+        <ImageWithFallback
+          src={product.image}
+          alt={product.name}
+          className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+        />
+      </div>
+      
+      {/* Details */}
+      <div className="p-6 space-y-4">
+        <div className="flex items-start justify-between gap-2">
+          <h3 className="flex-1 leading-snug">{product.name}</h3>
+          <span className="px-3 py-1 bg-accent/20 text-accent-foreground rounded-full text-sm whitespace-nowrap">
+            {product.category}
+          </span>
+        </div>
+        
+        <div className="flex items-center justify-between">
+          <p className="text-2xl text-foreground">{product.price}</p>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              navigate(`/product/${product.id}`);
+            }}
+            className="px-5 py-2 bg-accent hover:bg-accent/80 text-accent-foreground rounded-full transition-colors duration-200"
+          >
+            View
+          </button>
+        </div>
+      </div>
+    </motion.div>
+  );
+}
