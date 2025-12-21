@@ -3,7 +3,7 @@ import { motion } from 'motion/react';
 import { useNavigate } from 'react-router-dom';
 import { ImageWithFallback } from '../components/figma/ImageWithFallback';
 import { products, Product } from '../data/products';
-import { ShoppingCart } from 'lucide-react';
+import { ShoppingCart, Plus, Minus, Trash2 } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { toast } from 'sonner';
 
@@ -73,12 +73,31 @@ export function Shop() {
 
 function ProductCard({ product, index }: { product: Product; index: number }) {
   const navigate = useNavigate();
-  const { addToCart } = useCart();
+  const { cartItems, addToCart, decreaseQuantity, removeFromCart } = useCart();
+
+  const itemInCart = cartItems.find((item) => item.id === product.id);
 
   const handleAddToCart = (e: React.MouseEvent) => {
     e.stopPropagation();
     addToCart(product);
     toast.success(`${product.name} added to cart`);
+  };
+
+  const handleDecrease = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (itemInCart) {
+      if (itemInCart.quantity === 1) {
+        removeFromCart(product.id);
+        toast.error(`${product.name} removed from cart`);
+      } else {
+        decreaseQuantity(product.id);
+      }
+    }
+  };
+
+  const handleIncrease = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    addToCart(product);
   };
   
   return (
@@ -91,12 +110,17 @@ function ProductCard({ product, index }: { product: Product; index: number }) {
       className="bg-card rounded-3xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 cursor-pointer group flex flex-col"
     >
       {/* Image */}
-      <div className="aspect-square bg-gradient-to-br from-muted to-accent/10 overflow-hidden">
+      <div className="relative aspect-square bg-gradient-to-br from-muted to-accent/10 overflow-hidden">
         <ImageWithFallback
           src={product.image}
           alt={product.name}
           className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
         />
+        {itemInCart && (
+            <div className="absolute top-3 right-3 bg-primary text-primary-foreground rounded-full h-8 w-8 flex items-center justify-center text-sm font-bold">
+                {itemInCart.quantity}
+            </div>
+        )}
       </div>
       
       {/* Details */}
@@ -110,23 +134,27 @@ function ProductCard({ product, index }: { product: Product; index: number }) {
         
         <div className="flex items-center justify-between mt-auto pt-4">
           <p className="text-2xl text-foreground">{product.price}</p>
-          <div className="flex gap-2">
-             <button
-                onClick={handleAddToCart}
-                className="w-10 h-10 flex items-center justify-center bg-muted hover:bg-muted/80 text-foreground rounded-full transition-colors duration-200"
-                title="Add to Cart"
-              >
-                <ShoppingCart className="w-5 h-5" />
-              </button>
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  navigate(`/product/${product.id}`);
-                }}
-                className="px-5 py-2 bg-accent hover:bg-accent/80 text-accent-foreground rounded-full transition-colors duration-200"
-              >
-                View
-              </button>
+
+          <div className="flex items-center justify-end">
+            {!itemInCart ? (
+                <button
+                    onClick={handleAddToCart}
+                    className="w-10 h-10 flex items-center justify-center bg-accent text-accent-foreground rounded-full transition-all duration-200"
+                    title="Add to Cart"
+                >
+                    <ShoppingCart className="w-5 h-5" />
+                </button>
+            ) : (
+                <div className="flex items-center gap-1 bg-background border rounded-full p-1">
+                    <button onClick={handleDecrease} className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-muted">
+                         {itemInCart.quantity === 1 ? <Trash2 className="w-4 h-4 text-destructive" /> : <Minus className="w-4 h-4" />}
+                    </button>
+                    <span className="w-8 text-center font-medium">{itemInCart.quantity}</span>
+                    <button onClick={handleIncrease} className="w-8 h-8 flex items-center justify-center bg-accent text-accent-foreground rounded-full">
+                        <Plus className="w-4 h-4" />
+                    </button>
+                </div>
+            )}
           </div>
         </div>
       </div>
