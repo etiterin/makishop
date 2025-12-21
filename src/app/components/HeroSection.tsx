@@ -7,7 +7,7 @@ export function HeroSection() {
   const navigate = useNavigate();
   
   // Select a few featured products for the hero
-  const featuredProducts = products.slice(0, 3);
+  const featuredProducts = products.filter(p => p.inStock).slice(0, 3);
   
   return (
     <section className="min-h-screen relative overflow-hidden bg-gradient-to-br from-background via-background to-accent/5 pt-24">
