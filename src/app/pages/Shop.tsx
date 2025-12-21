@@ -116,11 +116,6 @@ function ProductCard({ product, index }: { product: Product; index: number }) {
           alt={product.name}
           className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
         />
-        {itemInCart && (
-            <div className="absolute top-3 right-3 bg-primary text-primary-foreground rounded-full h-8 w-8 flex items-center justify-center text-sm font-bold">
-                {itemInCart.quantity}
-            </div>
-        )}
       </div>
       
       {/* Details */}
