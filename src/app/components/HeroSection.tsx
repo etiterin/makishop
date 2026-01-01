@@ -36,9 +36,9 @@ export function HeroSection() {
                 transition={{ delay: 0.2, duration: 0.6 }}
                 className="text-5xl md:text-7xl leading-tight"
               >
-                Handcrafted
+                Welcome,
                 <br />
-                <span className="text-accent">with Love</span>
+                <span className="text-accent">Traveler</span>
               </motion.h1>
               
               <motion.p
@@ -47,7 +47,7 @@ export function HeroSection() {
                 transition={{ delay: 0.4, duration: 0.6 }}
                 className="text-xl text-muted-foreground max-w-md leading-relaxed"
               >
-                Original stickers and keychains, thoughtfully designed and handmade in small batches
+                Располагайся у костра. Мой караван полон сокровищ, милых штучек и красивых безделушек для твоего инвентаря.
               </motion.p>
             </div>
             
@@ -56,11 +56,11 @@ export function HeroSection() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.6, duration: 0.6 }}
               onClick={() => navigate('/shop')}
-              className="bg-accent hover:bg-accent/80 text-accent-foreground px-8 py-4 rounded-full shadow-lg hover:shadow-xl transition-all duration-300"
+              className="bg-accent hover:bg-accent/80 text-accent-foreground px-8 py-4 rounded-full shadow-lg hover:shadow-xl transition-all duration-300 font-medium tracking-wide"
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
             >
-              Explore Collection
+              Посмотреть товары
             </motion.button>
           </motion.div>
           
@@ -103,7 +103,7 @@ export function HeroSection() {
                   }}
                 >
                   {/* Polaroid frame */}
-                  <div className="bg-card p-4 pb-16 rounded-2xl shadow-2xl hover:shadow-3xl transition-all duration-300 w-64">
+                  <div className="bg-card p-4 pb-16 rounded-2xl shadow-2xl hover:shadow-3xl transition-all duration-300 w-64 transform group-hover:-translate-y-2">
                     <div className="aspect-square bg-muted rounded-xl overflow-hidden">
                       <ImageWithFallback
                         src={product.image}
@@ -114,12 +114,12 @@ export function HeroSection() {
                     
                     {/* Polaroid caption */}
                     <div className="mt-4 text-center">
-                      <p className="text-sm text-muted-foreground">{product.name}</p>
+                      <p className="text-sm text-muted-foreground font-medium">{product.name}</p>
                     </div>
                   </div>
                   
                   {/* Pin/tape effect */}
-                  <div className="absolute -top-2 left-1/2 -translate-x-1/2 w-12 h-6 bg-accent/40 rounded-sm rotate-3" />
+                  <div className="absolute -top-2 left-1/2 -translate-x-1/2 w-12 h-6 bg-accent/40 rounded-sm rotate-3 opacity-80" />
                 </motion.div>
               );
             })}

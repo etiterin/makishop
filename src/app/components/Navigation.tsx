@@ -25,7 +25,7 @@ export function Navigation() {
               <div className="w-10 h-10 bg-accent/20 rounded-full flex items-center justify-center">
                 <span className="text-xl">✨</span>
               </div>
-              <span className="text-xl text-foreground tracking-wide">Studio Luna</span>
+              <span className="text-xl text-foreground tracking-wide font-medium">Makinari Shop</span>
             </motion.div>
           </Link>
           
