@@ -52,28 +52,18 @@ export function Shop() {
   return (
     <div className="min-h-screen pt-24 pb-20 px-6">
       <div className="max-w-7xl mx-auto">
-        {/* Header */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6 }}
-          className="mb-12 text-center"
-        >
+        {/* Header - Убрана анимация появления */}
+        <div className="mb-12 text-center">
           <h1 className="text-5xl mb-4">Коллекция</h1>
           <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
             Каждая вещь сделана вручную, с любовью и вниманием к деталям
           </p>
-        </motion.div>
+        </div>
         
-        {/* Filters */}
+        {/* Filters - Убрана анимация появления */}
         <div className="space-y-6 mb-16">
             {/* Category Filters */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.2, duration: 0.6 }}
-              className="flex justify-center flex-wrap gap-3"
-            >
+            <div className="flex justify-center flex-wrap gap-3">
               {categories.map((cat) => (
                 <button
                   key={cat.value}
@@ -87,15 +77,10 @@ export function Shop() {
                   {cat.label}
                 </button>
               ))}
-            </motion.div>
+            </div>
 
              {/* Fandom Filters */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.3, duration: 0.6 }}
-              className="flex justify-center flex-wrap gap-2"
-            >
+            <div className="flex justify-center flex-wrap gap-2">
               <span className="text-sm font-medium text-muted-foreground self-center mr-2">Фандом:</span>
               {fandoms.map((fan) => (
                 <button
@@ -110,7 +95,7 @@ export function Shop() {
                   {fan.label}
                 </button>
               ))}
-            </motion.div>
+            </div>
         </div>
         
         {/* Product Grid */}
@@ -164,7 +149,6 @@ function ProductCard({ product, index }: { product: Product; index: number }) {
   
   return (
     <motion.div
-      // Удалены анимации initial и animate для предотвращения мерцания при навигации
       whileHover={{ y: -8 }}
       onClick={() => navigate(`/product/${product.id}`)}
       className="bg-card rounded-3xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 group flex flex-col cursor-pointer"
