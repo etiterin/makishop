@@ -11,9 +11,19 @@ export interface Product {
 
 export const products: Product[] = [
   {
+    id: 9,
+    name: 'Голографические стикеры Вапореон',
+    price: '300 ₽',
+    category: 'sticker',
+    fandom: 'Pokemon',
+    image: '/images/vaporeon-stickers.jpeg',
+    description: 'Окунись в сияющий водоворот магии с этим набором голографических наклеек, посвящённых Вапореону! Качественная плёнка с радужным переливом. Формат А6, плоттерная резка.',
+    inStock: true,
+  },
+  {
     id: 1,
     name: 'Rei Ayanami (Evangelion)',
-    price: '$5.00',
+    price: '450 ₽',
     category: 'print',
     fandom: 'Evangelion',
     image: 'https://images.unsplash.com/photo-1541963463532-d68292c34b19?q=80&w=1080&auto=format&fit=crop', // Placeholder
@@ -23,7 +33,7 @@ export const products: Product[] = [
   {
     id: 2,
     name: 'Moonlight Cat Keychain',
-    price: '$8.00',
+    price: '750 ₽',
     category: 'keychain',
     fandom: 'Original',
     image: 'https://images.unsplash.com/photo-1760733672584-475e728f09c5?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxrYXdhaWklMjBrZXljaGFpbiUyMHBhc3RlbHxlbnwxfHx8fDE3NjYzMzY5NTV8MA&ixlib=rb-4.1.0&q=80&w=1080',
@@ -33,7 +43,7 @@ export const products: Product[] = [
   {
     id: 3,
     name: 'Pokemon Starters Set',
-    price: '$10.00',
+    price: '900 ₽',
     category: 'set',
     fandom: 'Pokemon',
     image: 'https://images.unsplash.com/photo-1613771404721-1f92d799e49f?q=80&w=1080&auto=format&fit=crop', // Placeholder
@@ -43,7 +53,7 @@ export const products: Product[] = [
   {
     id: 4,
     name: 'Cloud Nine Keychain',
-    price: '$7.50',
+    price: '700 ₽',
     category: 'keychain',
     fandom: 'Original',
     image: 'https://images.unsplash.com/photo-1628586431263-44040b966252?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxhcnRpc3QlMjB3b3Jrc3BhY2UlMjBkZXNrfGVufDF8fHx8MTc2NjMzNjk1NHww&ixlib=rb-4.1.0&q=80&w=1080',
@@ -53,7 +63,7 @@ export const products: Product[] = [
   {
     id: 5,
     name: 'Pastel Garden Set',
-    price: '$12.00',
+    price: '1100 ₽',
     category: 'set',
     fandom: 'Original',
     image: 'https://images.unsplash.com/photo-1764344814867-d7a6916e1a37?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxjdXRlJTIwc3RpY2tlcnMlMjBjb2xsZWN0aW9ufGVufDF8fHx8MTc2NjMzNjk1NXww&ixlib=rb-4.1.0&q=80&w=1080',
@@ -63,7 +73,7 @@ export const products: Product[] = [
   {
     id: 6,
     name: 'Starlight Bear Keychain',
-    price: '$8.50',
+    price: '850 ₽',
     category: 'keychain',
     fandom: 'Original',
     image: 'https://images.unsplash.com/photo-1760733672584-475e728f09c5?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxrYXdhaWklMjBrZXljaGFpbiUyMHBhc3RlbHxlbnwxfHx8fDE3NjYzMzY5NTV8MA&ixlib=rb-4.1.0&q=80&w=1080',
@@ -73,7 +83,7 @@ export const products: Product[] = [
   {
     id: 7,
     name: 'Zarya Mandarin Collab',
-    price: '$6.00',
+    price: '550 ₽',
     category: 'sticker',
     fandom: 'Original',
     image: 'https://images.unsplash.com/photo-1617646160236-db27e21e4efe?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxoYW5kbWFkZSUyMGNyYWZ0JTIwYXJ0fGVufDF8fHx8MTc2NjMzNjk1Nnww&ixlib=rb-4.1.0&q=80&w=1080',
@@ -83,7 +93,7 @@ export const products: Product[] = [
   {
     id: 8,
     name: 'Mini Moments Set',
-    price: '$15.00',
+    price: '1400 ₽',
     category: 'set',
     fandom: 'Original',
     image: 'https://images.unsplash.com/photo-1764344814867-d7a6916e1a37?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxjdXRlJTIwc3RpY2tlcnMlMjBjb2xsZWN0aW9ufGVufDF8fHx8MTc2NjMzNjk1NXww&ixlib=rb-4.1.0&q=80&w=1080',
