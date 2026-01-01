@@ -18,12 +18,12 @@ export function ProductDetail() {
     return (
       <div className="min-h-screen pt-24 flex items-center justify-center">
         <div className="text-center space-y-4">
-          <p className="text-xl text-muted-foreground">Product not found</p>
+          <p className="text-xl text-muted-foreground">Товар не найден</p>
           <button
             onClick={() => navigate('/shop')}
             className="px-6 py-3 bg-accent text-accent-foreground rounded-full hover:bg-accent/80 transition-colors"
           >
-            Back to Shop
+            Вернуться в магазин
           </button>
         </div>
       </div>
@@ -32,7 +32,7 @@ export function ProductDetail() {
 
   const handleAddToCart = () => {
       addToCart(product);
-      toast.success(`${product.name} added to cart`);
+      toast.success(`${product.name} добавлен в корзину`);
   };
   
   return (
@@ -46,7 +46,7 @@ export function ProductDetail() {
           className="flex items-center gap-2 text-muted-foreground hover:text-foreground mb-8 group"
         >
           <ArrowLeft className="w-5 h-5 group-hover:-translate-x-1 transition-transform" />
-          Back to Shop
+          Назад в магазин
         </motion.button>
         
         <div className="grid md:grid-cols-2 gap-12">
@@ -65,7 +65,7 @@ export function ProductDetail() {
               />
               {!product.inStock && (
                 <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
-                    <span className="text-white font-semibold tracking-wider text-lg bg-black/50 px-4 py-2 rounded-lg">Out of Stock</span>
+                    <span className="text-white font-semibold tracking-wider text-lg bg-black/50 px-4 py-2 rounded-lg">Нет в наличии</span>
                 </div>
               )}
             </div>
@@ -109,12 +109,12 @@ export function ProductDetail() {
             
             <div className="space-y-4">
               <div className="p-6 bg-muted rounded-2xl space-y-3">
-                <h3 className="text-lg">Product Details</h3>
+                <h3 className="text-lg">Детали</h3>
                 <ul className="space-y-2 text-muted-foreground">
-                  <li>✓ Handmade with care</li>
-                  <li>✓ Original design</li>
-                  <li>✓ High-quality materials</li>
-                  <li>✓ Waterproof & durable</li>
+                  <li>✓ Сделано вручную с любовью</li>
+                  <li>✓ Оригинальный дизайн</li>
+                  <li>✓ Качественные материалы</li>
+                  <li>✓ Водостойкий и прочный</li>
                 </ul>
               </div>
               
@@ -126,11 +126,11 @@ export function ProductDetail() {
                       className="w-full text-lg h-14 rounded-full shadow-lg"
                     >
                       <ShoppingCart className="w-5 h-5 mr-2" />
-                      Add to Cart
+                      В корзину
                     </Button>
                 ) : (
                   <Button size="lg" disabled className="w-full text-lg h-14 rounded-full">
-                    Out of Stock
+                    Нет в наличии
                   </Button>
                 )}
                   
@@ -141,12 +141,12 @@ export function ProductDetail() {
                     className="w-full text-lg h-14 rounded-full"
                   >
                     <MessageCircle className="w-5 h-5 mr-2" />
-                    Contact for Custom Order
+                    Написать по заказу
                   </Button>
               </div>
               
               <p className="text-sm text-muted-foreground text-center">
-                Each item is made to order. Please allow 3-5 business days for creation.
+                Каждое изделие создается под заказ. Пожалуйста, ожидайте 3-5 дней на изготовление.
               </p>
             </div>
           </motion.div>

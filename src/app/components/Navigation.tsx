@@ -6,10 +6,10 @@ export function Navigation() {
   const location = useLocation();
   
   const navItems = [
-    { path: '/', label: 'Home' },
-    { path: '/shop', label: 'Shop' },
-    { path: '/about', label: 'About' },
-    { path: '/contact', label: 'Contact' },
+    { path: '/', label: 'Главная' },
+    { path: '/shop', label: 'Магазин' },
+    { path: '/about', label: 'О нас' },
+    { path: '/contact', label: 'Контакты' },
   ];
   
   return (

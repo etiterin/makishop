@@ -13,11 +13,11 @@ export const Cart = () => {
   }, 0);
 
   const checkoutMessage = () => {
-    let message = "Hello, I would like to order:\n\n";
+    let message = "Привет! Я хочу оформить заказ:\n\n";
     cartItems.forEach(item => {
       message += `- ${item.name} (x${item.quantity}) - ${item.price}\n`;
     });
-    message += `\nTotal: $${total.toFixed(2)}`;
+    message += `\nИтого: $${total.toFixed(2)}`;
     return message;
   };
 
@@ -27,7 +27,7 @@ export const Cart = () => {
     // For MVP, let's alert and copy to clipboard, or open a mailto link
     // Here we will copy to clipboard and maybe open a new tab for telegram if we had a username
     navigator.clipboard.writeText(message).then(() => {
-        alert("Order text copied to clipboard! You can paste it in Telegram/WhatsApp.");
+        alert("Текст заказа скопирован! Отправь его мне в Telegram или VK.");
     });
   };
 
@@ -45,16 +45,16 @@ export const Cart = () => {
       </SheetTrigger>
       <SheetContent>
         <SheetHeader>
-          <SheetTitle>Shopping Cart</SheetTitle>
+          <SheetTitle>Корзина</SheetTitle>
           <SheetDescription>
-            Review your selected items before checkout.
+            Проверь свой заказ перед оформлением.
           </SheetDescription>
         </SheetHeader>
         <div className="flex-1 overflow-hidden py-4">
              {cartItems.length === 0 ? (
                 <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
                     <ShoppingCart className="h-12 w-12 mb-2 opacity-20" />
-                    <p>Your cart is empty</p>
+                    <p>Корзина пуста</p>
                 </div>
              ) : (
                  <ScrollArea className="h-[calc(100vh-200px)] px-4">
@@ -103,14 +103,14 @@ export const Cart = () => {
             <SheetFooter>
                 <div className="w-full space-y-4">
                     <div className="flex justify-between font-medium">
-                        <span>Total</span>
+                        <span>Итого</span>
                         <span>${total.toFixed(2)}</span>
                     </div>
                     <Button className="w-full" onClick={handleCheckout}>
-                        Checkout (Copy Order)
+                        Скопировать заказ
                     </Button>
                     <Button variant="outline" className="w-full" onClick={clearCart}>
-                        Clear Cart
+                        Очистить корзину
                     </Button>
                 </div>
             </SheetFooter>

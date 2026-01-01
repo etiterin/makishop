@@ -1,46 +1,46 @@
 import { motion } from 'motion/react';
-import { Instagram, Send, Mail } from 'lucide-react';
+import { Send, Heart, MessageCircle, ExternalLink } from 'lucide-react';
 
 export function Contact() {
   const contactMethods = [
     {
       icon: Send,
-      title: 'Telegram',
-      description: 'Quick and easy messaging',
-      link: 'https://t.me/studioluna',
-      handle: '@studioluna',
+      title: 'Telegram Канал',
+      description: 'Новости, скетчи и процессы',
+      link: 'https://t.me/makinari_art',
+      handle: '@makinari_art',
     },
     {
-      icon: Instagram,
-      title: 'Instagram',
-      description: 'See our latest creations',
-      link: 'https://instagram.com/studioluna',
-      handle: '@studioluna',
+      icon: MessageCircle,
+      title: 'ВКонтакте',
+      description: 'Группа с портфолио и товарами',
+      link: 'https://vk.com/makinari_art',
+      handle: 'Makinari_art',
     },
     {
-      icon: Mail,
-      title: 'Email',
-      description: 'For detailed inquiries',
-      link: 'mailto:hello@studioluna.art',
-      handle: 'hello@studioluna.art',
+      icon: Heart,
+      title: 'Boosty',
+      description: 'Поддержка творчества и эксклюзивы',
+      link: 'https://boosty.to/makinari',
+      handle: 'boosty.to/makinari',
     },
   ];
   
   const steps = [
     {
       number: '01',
-      title: 'Choose',
-      description: 'Browse our collection and pick your favorite items',
+      title: 'Выбери',
+      description: 'Выбери товары в каталоге и добавь их в корзину',
     },
     {
       number: '02',
-      title: 'Message',
-      description: 'Reach out via Telegram, Instagram, or Email',
+      title: 'Отправь',
+      description: 'Скопируй текст заказа и отправь мне в ЛС Telegram (@Makinari)',
     },
     {
       number: '03',
-      title: 'Receive',
-      description: "We'll pack your order with care and ship it to you",
+      title: 'Получи',
+      description: "Я все упакую с любовью и отправлю тебе посылочку",
     },
   ];
   
@@ -54,9 +54,9 @@ export function Contact() {
           transition={{ duration: 0.6 }}
           className="text-center space-y-4"
         >
-          <h1 className="text-5xl">Get in Touch</h1>
+          <h1 className="text-5xl">Связь и Заказ</h1>
           <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-            We'd love to hear from you! Choose your preferred way to connect
+            Здесь можно найти мои соцсети и оформить заказ
           </p>
         </motion.div>
         
@@ -72,15 +72,18 @@ export function Contact() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.2 + index * 0.1, duration: 0.6 }}
               whileHover={{ y: -8, scale: 1.02 }}
-              className="bg-card p-8 rounded-3xl shadow-sm hover:shadow-xl transition-all duration-300 space-y-4 text-center group"
+              className="bg-card p-8 rounded-3xl shadow-sm hover:shadow-xl transition-all duration-300 space-y-4 text-center group relative overflow-hidden"
             >
               <div className="w-16 h-16 mx-auto bg-accent/20 rounded-full flex items-center justify-center group-hover:scale-110 transition-transform">
                 <method.icon className="w-8 h-8 text-accent-foreground" />
               </div>
               <div className="space-y-2">
-                <h3 className="text-xl">{method.title}</h3>
+                <h3 className="text-xl flex items-center justify-center gap-2">
+                    {method.title}
+                    <ExternalLink className="w-4 h-4 opacity-50" />
+                </h3>
                 <p className="text-sm text-muted-foreground">{method.description}</p>
-                <p className="text-foreground">{method.handle}</p>
+                <p className="text-foreground font-medium">{method.handle}</p>
               </div>
             </motion.a>
           ))}
@@ -95,7 +98,7 @@ export function Contact() {
             transition={{ duration: 0.6 }}
             className="text-3xl text-center"
           >
-            How to Order
+            Как сделать заказ
           </motion.h2>
           
           <div className="grid md:grid-cols-3 gap-8">
@@ -108,10 +111,15 @@ export function Contact() {
                 transition={{ delay: index * 0.2, duration: 0.6 }}
                 className="relative"
               >
-                <div className="bg-card p-8 rounded-3xl shadow-sm space-y-4">
+                <div className="bg-card p-8 rounded-3xl shadow-sm space-y-4 h-full">
                   <div className="text-6xl font-bold text-accent/20">{step.number}</div>
                   <h3 className="text-xl">{step.title}</h3>
                   <p className="text-muted-foreground">{step.description}</p>
+                   {index === 1 && (
+                      <a href="https://t.me/Makinari" target="_blank" rel="noreferrer" className="inline-block mt-2 text-accent hover:underline text-sm font-medium">
+                          Написать Маки →
+                      </a>
+                   )}
                 </div>
                 
                 {/* Connecting line */}
@@ -131,34 +139,34 @@ export function Contact() {
           transition={{ duration: 0.6 }}
           className="bg-muted p-8 md:p-12 rounded-3xl space-y-6"
         >
-          <h2 className="text-3xl text-center mb-8">Quick Info</h2>
+          <h2 className="text-3xl text-center mb-8">Важная информация</h2>
           
           <div className="grid md:grid-cols-2 gap-8">
             <div className="space-y-3">
-              <h3 className="text-lg">Production Time</h3>
+              <h3 className="text-lg">Сроки изготовления</h3>
               <p className="text-muted-foreground">
-                Each item is made to order. Please allow 3-5 business days for creation.
+                Некоторые товары есть в наличии, другие делаются под заказ. Обычно отправка занимает 3-5 дней.
               </p>
             </div>
             
             <div className="space-y-3">
-              <h3 className="text-lg">Shipping</h3>
+              <h3 className="text-lg">Доставка</h3>
               <p className="text-muted-foreground">
-                We ship worldwide! Delivery times vary by location (typically 5-14 days).
+                Отправляю Почтой России или СДЭК. Трек-номер высылаю сразу после отправки.
               </p>
             </div>
             
             <div className="space-y-3">
-              <h3 className="text-lg">Custom Orders</h3>
+              <h3 className="text-lg">Индивидуальные заказы</h3>
               <p className="text-muted-foreground">
-                Interested in a custom design? Reach out and let's discuss your ideas!
+                Хочешь арт или мерч с уникальным дизайном? Напиши мне, обсудим идеи!
               </p>
             </div>
             
             <div className="space-y-3">
-              <h3 className="text-lg">Care Instructions</h3>
+              <h3 className="text-lg">Уход за мерчем</h3>
               <p className="text-muted-foreground">
-                Our stickers are waterproof. For keychains, avoid prolonged water exposure.
+                Стикеры водостойкие. Брелоки лучше не царапать острыми предметами.
               </p>
             </div>
           </div>

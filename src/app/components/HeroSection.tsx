@@ -36,9 +36,9 @@ export function HeroSection() {
                 transition={{ delay: 0.2, duration: 0.6 }}
                 className="text-5xl md:text-7xl leading-tight"
               >
-                Welcome,
+                Добро пожаловать,
                 <br />
-                <span className="text-accent">Traveler</span>
+                <span className="text-accent">Путник</span>
               </motion.h1>
               
               <motion.p

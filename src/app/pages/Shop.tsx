@@ -142,7 +142,7 @@ function ProductCard({ product, index }: { product: Product; index: number }) {
   const handleAddToCart = (e: React.MouseEvent) => {
     e.stopPropagation();
     addToCart(product);
-    toast.success(`${product.name} added to cart`);
+    toast.success(`${product.name} добавлен в корзину`);
   };
 
   const handleDecrease = (e: React.MouseEvent) => {
@@ -150,7 +150,7 @@ function ProductCard({ product, index }: { product: Product; index: number }) {
     if (itemInCart) {
       if (itemInCart.quantity === 1) {
         removeFromCart(product.id);
-        toast.error(`${product.name} removed from cart`);
+        toast.error(`${product.name} удален из корзины`);
       } else {
         decreaseQuantity(product.id);
       }
@@ -180,7 +180,7 @@ function ProductCard({ product, index }: { product: Product; index: number }) {
         />
         {!product.inStock && (
              <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
-                <span className="text-white font-semibold tracking-wider text-lg bg-black/50 px-4 py-2 rounded-lg">Out of Stock</span>
+                <span className="text-white font-semibold tracking-wider text-lg bg-black/50 px-4 py-2 rounded-lg">Нет в наличии</span>
             </div>
         )}
       </div>
@@ -210,7 +210,7 @@ function ProductCard({ product, index }: { product: Product; index: number }) {
                     <button
                         onClick={handleAddToCart}
                         className="w-10 h-10 flex items-center justify-center bg-accent text-accent-foreground rounded-full transition-all duration-200 hover:scale-105 active:scale-95"
-                        title="Add to Cart"
+                        title="Добавить в корзину"
                     >
                         <ShoppingCart className="w-5 h-5" />
                     </button>
