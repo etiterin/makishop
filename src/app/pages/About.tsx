@@ -1,6 +1,6 @@
 import { motion } from 'motion/react';
 import { ImageWithFallback } from '../components/figma/ImageWithFallback';
-import { Heart, Palette, Sparkles, Sword, Ghost, Scroll } from 'lucide-react';
+import { Heart, Palette, Sparkles, Scroll, Star, Users } from 'lucide-react';
 
 export function About() {
   const values = [
@@ -37,7 +37,7 @@ export function About() {
           </p>
         </motion.div>
         
-        {/* Story Section */}
+        {/* Intro Section */}
         <div className="grid md:grid-cols-2 gap-12 items-center">
           <motion.div
             initial={{ opacity: 0, x: -30 }}
@@ -55,10 +55,6 @@ export function About() {
                 Все, что ты видишь на прилавке — плоды моего творчества. Это не просто перепечатка картинок из интернета, 
                 а эксклюзивный товар, который я создаю сама. В моем шатре есть как оригинальные сюжеты и персонажи, 
                 так и фан-арт по различным вселенным, которые я искренне люблю.
-              </p>
-              <p>
-                Можно встретить работы по аниме фандомам, по различным играм и мультфильмам. Ну и куда же без животных — 
-                эта тема одна из основных в моем творчестве.
               </p>
               <p>
                 Глаза разбегаются, да? Не стесняйся, выбирай на здоровье, рассмотри все хорошенько, и ты обязательно 
@@ -82,6 +78,68 @@ export function About() {
             </div>
           </motion.div>
         </div>
+
+        {/* 2024 Recap / Chronicles */}
+        <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6 }}
+            className="bg-muted/30 rounded-3xl p-8 md:p-12 space-y-8"
+        >
+            <div className="text-center space-y-2">
+                <h2 className="text-3xl flex items-center justify-center gap-2">
+                    <Star className="w-6 h-6 text-accent" />
+                    Хроники Пути
+                    <Star className="w-6 h-6 text-accent" />
+                </h2>
+                <p className="text-muted-foreground">История о росте, магии творчества и теплых встречах</p>
+            </div>
+
+            <div className="grid md:grid-cols-2 gap-12">
+                <div className="space-y-6 text-muted-foreground leading-relaxed">
+                    <p>
+                        Этот год стал для меня очень насыщенным, тёплым и по-настоящему продуктивным.
+                        Годом, в котором было много рисования, сомнений, радостей, маленьких побед и большого роста.
+                    </p>
+                    <p>
+                        Я создала множество красивых и вдохновляющих работ — и каждая из них стала частью моего пути как художника. (★^O^★)
+                    </p>
+                    <p>
+                         Особое место заняли коллаборации с моим любимым маркетом <strong>Заря</strong> и солнечной маскоткой — <strong>Мандаринкой</strong>.
+                        Это была целая история про доверие, поддержку и удовольствие от совместного творчества. ᕙʕಠᴥಠʔᕗ
+                    </p>
+                    <p>
+                        В этом году я наконец исполнила свою давнюю задумку — сделала мерч по <strong>«Евангелиону»</strong> и <strong>«Покемонам»</strong> 🤍o.(+･`ω･+).o.
+                        Это мои самые любимые фандомы, и вложить в них часть себя было особенно ценно.
+                    </p>
+                </div>
+                <div className="space-y-6">
+                     <h3 className="text-xl font-medium flex items-center gap-2">
+                        <Users className="w-5 h-5" />
+                        Маркеты и встречи
+                     </h3>
+                     <p className="text-muted-foreground">
+                        Этот год подарил мне много опыта и знакомств. Я посетила маркеты <strong>Заря</strong>, <strong>Кико</strong>, <strong>ФурМаркет</strong>, <strong>Ласковый Маркет</strong>.
+                        Познакомилась с невероятными авторами и посетителями — каждое общение вдохновляло продолжать. ╰(˵ヘωヘ✿)╯
+                     </p>
+                     
+                     <div className="bg-background rounded-xl p-6 shadow-sm border border-border/50">
+                        <h4 className="font-medium mb-3">Новые полочки:</h4>
+                        <div className="flex flex-wrap gap-2">
+                            {['Созвездие', 'Арт Хаус', 'Ушастая Полка'].map(shelf => (
+                                <span key={shelf} className="px-3 py-1 bg-accent/10 text-accent-foreground rounded-full text-sm">
+                                    ✶ {shelf}
+                                </span>
+                            ))}
+                        </div>
+                        <p className="mt-3 text-sm text-muted-foreground">
+                            Это особенное чувство — видеть, как твои работы находят свой дом. (^_^)ヾ(^^ )
+                        </p>
+                     </div>
+                </div>
+            </div>
+        </motion.div>
         
         {/* Values */}
         <div>
@@ -115,7 +173,7 @@ export function About() {
           </div>
         </div>
         
-        {/* Workspace Image */}
+        {/* Workspace Image / Artwork Summary */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
@@ -123,16 +181,20 @@ export function About() {
           transition={{ duration: 0.6 }}
           className="space-y-4"
         >
-          <h2 className="text-3xl text-center">Мастерская</h2>
-          <div className="aspect-video bg-card rounded-3xl overflow-hidden shadow-xl">
+          <h2 className="text-3xl text-center">Итоги года в артах</h2>
+          <div className="aspect-video bg-card rounded-3xl overflow-hidden shadow-xl relative group">
+             {/* Placeholder for Artwork Summary */}
             <ImageWithFallback
-              src="https://images.unsplash.com/photo-1628586431263-44040b966252?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxhcnRpc3QlMjB3b3Jrc3BhY2UlMjBkZXNrfGVufDF8fHx8MTc2NjMzNjk1NHww&ixlib=rb-4.1.0&q=80&w=1080"
-              alt="Workspace"
-              className="w-full h-full object-cover"
+              src="https://images.unsplash.com/photo-1513364776144-60967b0f800f?q=80&w=1080&auto=format&fit=crop"
+              alt="2024 Artwork Summary"
+              className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity duration-500"
             />
+            <div className="absolute inset-0 flex items-center justify-center">
+                <span className="bg-black/50 text-white px-4 py-2 rounded-lg backdrop-blur-sm">Место для вашего коллажа с итогами года</span>
+            </div>
           </div>
           <p className="text-center text-muted-foreground">
-            Место, где создается магия — уютный уголок, полный вдохновения
+             Каждая работа — это маленькая победа и шаг вперед.
           </p>
         </motion.div>
       </div>
