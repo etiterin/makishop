@@ -8,7 +8,8 @@ export const Cart = () => {
   const { cartItems, addToCart, decreaseQuantity, removeFromCart, clearCart } = useCart();
 
   const total = cartItems.reduce((acc, item) => {
-    const price = parseFloat(item.price.replace('$', ''));
+    // Удаляем все нечисловые символы, кроме точки, чтобы получить цену
+    const price = parseFloat(item.price.replace(/[^0-9.]/g, ''));
     return acc + price * item.quantity;
   }, 0);
 
@@ -17,7 +18,7 @@ export const Cart = () => {
     cartItems.forEach(item => {
       message += `- ${item.name} (x${item.quantity}) - ${item.price}\n`;
     });
-    message += `\nИтого: $${total.toFixed(2)}`;
+    message += `\nИтого: ${total} ₽`;
     return message;
   };
 
@@ -104,7 +105,7 @@ export const Cart = () => {
                 <div className="w-full space-y-4">
                     <div className="flex justify-between font-medium">
                         <span>Итого</span>
-                        <span>${total.toFixed(2)}</span>
+                        <span>{total} ₽</span>
                     </div>
                     <Button className="w-full" onClick={handleCheckout}>
                         Скопировать заказ
