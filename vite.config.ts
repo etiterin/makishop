@@ -10,6 +10,7 @@ export default defineConfig({
     react(),
     tailwindcss(),
   ],
+  base: '/makishop/', // Базовый путь для GitHub Pages
   resolve: {
     alias: {
       // Alias @ to the src directory
