@@ -22,6 +22,13 @@ export function ImageWithFallback(props: React.ImgHTMLAttributes<HTMLImageElemen
       </div>
     </div>
   ) : (
-    <img src={src} alt={alt} className={className} style={style} {...rest} onError={handleError} />
+    <img 
+      src={src} 
+      alt={alt} 
+      className={`bg-muted/30 ${className}`} // Оставил только фон, убрал анимацию opacity
+      style={style} 
+      {...rest} 
+      onError={handleError} 
+    />
   )
 }
