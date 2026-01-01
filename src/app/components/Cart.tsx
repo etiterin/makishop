@@ -1,8 +1,9 @@
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetFooter, SheetTrigger } from './ui/sheet';
 import { Button } from './ui/button';
 import { useCart } from '../context/CartContext';
-import { ShoppingCart, Trash2, Plus, Minus } from 'lucide-react';
+import { ShoppingCart, Trash2, Plus, Minus, Check } from 'lucide-react';
 import { ScrollArea } from './ui/scroll-area';
+import { toast } from 'sonner';
 
 export const Cart = () => {
   const { cartItems, addToCart, decreaseQuantity, removeFromCart, clearCart } = useCart();
@@ -24,11 +25,16 @@ export const Cart = () => {
 
   const handleCheckout = () => {
     const message = checkoutMessage();
-    // Copy to clipboard or open a messaging app
-    // For MVP, let's alert and copy to clipboard, or open a mailto link
-    // Here we will copy to clipboard and maybe open a new tab for telegram if we had a username
+    
     navigator.clipboard.writeText(message).then(() => {
-        alert("Текст заказа скопирован! Отправь его мне в Telegram или VK.");
+        toast.success("Текст заказа скопирован!", {
+            description: "Отправь его мне в Telegram или VK для оформления.",
+            icon: <Check className="w-4 h-4 text-green-500" />,
+            duration: 5000,
+        });
+        
+        // Опционально: можно предложить сразу открыть Telegram
+        // window.open('https://t.me/makinari_art', '_blank');
     });
   };
 

@@ -15,7 +15,15 @@ export function ProductDetail() {
   
   // Принудительный скролл наверх при открытии страницы товара
   useLayoutEffect(() => {
+    // Мгновенный скролл
     window.scrollTo(0, 0);
+    
+    // Страховочный скролл через минимальную задержку, чтобы компенсировать возможные сдвиги верстки
+    const timeout = setTimeout(() => {
+        window.scrollTo(0, 0);
+    }, 0);
+    
+    return () => clearTimeout(timeout);
   }, [id]);
 
   const product = products.find((p) => p.id === Number(id));

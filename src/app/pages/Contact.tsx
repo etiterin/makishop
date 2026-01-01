@@ -7,8 +7,8 @@ export function Contact() {
       icon: Send,
       title: 'Telegram Канал',
       description: 'Новости, скетчи и процессы',
-      link: 'https://t.me/makinari_art',
-      handle: '@makinari_art',
+      link: 'https://t.me/makimerch',
+      handle: '@makimerch',
     },
     {
       icon: MessageCircle,
