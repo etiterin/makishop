@@ -6,12 +6,18 @@ import { products } from '../data/products';
 import { useCart } from '../context/CartContext';
 import { Button } from '../components/ui/button';
 import { toast } from 'sonner';
+import { useLayoutEffect } from 'react';
 
 export function ProductDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { addToCart } = useCart();
   
+  // Принудительный скролл наверх при открытии страницы товара
+  useLayoutEffect(() => {
+    window.scrollTo(0, 0);
+  }, [id]);
+
   const product = products.find((p) => p.id === Number(id));
   
   if (!product) {
