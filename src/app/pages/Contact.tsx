@@ -21,8 +21,8 @@ export function Contact() {
       icon: Heart,
       title: 'Boosty',
       description: 'Поддержка творчества и эксклюзивы',
-      link: 'https://boosty.to/makinari',
-      handle: 'boosty.to/makinari',
+      link: 'https://boosty.to/etsuqu',
+      handle: 'boosty.to/etsuqu',
     },
   ];
   
