@@ -14,8 +14,8 @@ export function Contact() {
       icon: MessageCircle,
       title: 'ВКонтакте',
       description: 'Группа с портфолио и товарами',
-      link: 'https://vk.com/makinari_art',
-      handle: 'Makinari_art',
+      link: 'https://vk.com/makinari24',
+      handle: 'Makinari',
     },
     {
       icon: Heart,
