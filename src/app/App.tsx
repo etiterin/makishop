@@ -6,11 +6,13 @@ import { ProductDetail } from './pages/ProductDetail';
 import { About } from './pages/About';
 import { Contact } from './pages/Contact';
 import { CartProvider } from './context/CartContext';
+import { ScrollToTop } from './components/ScrollToTop';
 
 export default function App() {
   return (
     <BrowserRouter>
       <CartProvider>
+        <ScrollToTop />
         <div className="min-h-screen">
           <Navigation />
           <Routes>
