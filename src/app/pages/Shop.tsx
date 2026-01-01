@@ -164,9 +164,7 @@ function ProductCard({ product, index }: { product: Product; index: number }) {
   
   return (
     <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: index * 0.05, duration: 0.6 }}
+      // Удалены анимации initial и animate для предотвращения мерцания при навигации
       whileHover={{ y: -8 }}
       onClick={() => navigate(`/product/${product.id}`)}
       className="bg-card rounded-3xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 group flex flex-col cursor-pointer"
