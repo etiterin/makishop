@@ -4,8 +4,20 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Makinari Shop - Управление товарами</title>
-  <script src="https://unpkg.com/decap-cms@^3.0.0/dist/decap-cms.js"></script>
+  <script src="https://unpkg.com/decap-cms-app@^3.0.0/dist/decap-cms-app.js"></script>
 </head>
 <body>
+  <script>
+    DecapCmsApp.init({ 
+        config: { 
+            backend: { 
+                name: "github", 
+                repo: "etiterin/makishop", 
+                branch: "main", 
+                app_id: "Ov23li5MBpIowbpNfJiR"
+            } 
+        }
+    });
+  </script>
 </body>
 </html>
