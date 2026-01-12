@@ -3,6 +3,7 @@ backend:
   repo: etiterin/makishop
   branch: main
   auth_type: pkce
+  site_domain: makinari.art
   client_id: Ov23li5MBpIowbpNfJiR
 
 publish_mode: editorial_workflow
