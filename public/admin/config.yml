@@ -4,7 +4,7 @@ backend:
   branch: main
   auth_type: pkce
   base_url: https://decap-proxy.icemage-bk.workers.dev
-  auth_endpoint: https://decap-proxy.icemage-bk.workers.dev/auth
+  auth_endpoint: auth
   client_id: Ov23li5MBpIowbpNfJiR
 
 publish_mode: editorial_workflow
