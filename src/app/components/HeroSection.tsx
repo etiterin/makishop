@@ -1,7 +1,9 @@
 import { motion } from 'motion/react';
 import { useNavigate } from 'react-router-dom';
 import { ImageWithFallback } from './figma/ImageWithFallback';
-import products from '../data/products.json';
+import productsData from '../data/products.json';
+
+const products = productsData.products;
 
 export function HeroSection() {
   const navigate = useNavigate();

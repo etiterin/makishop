@@ -1,17 +1,17 @@
 backend:
   name: github
-  repo: etiterin/makishop # Замените на свой репозиторий
-  branch: main # или master
+  repo: etiterin/makishop
+  branch: main
+  app_id: Ov23li5MBpIowbpNfJiR
 
-media_folder: "public/images/uploads" # Где хранить загруженные картинки
-public_folder: "/images/uploads" # Как ссылаться на них на сайте
+media_folder: "public/images/uploads"
+public_folder: "/images/uploads"
 
 collections:
   - name: "products"
     label: "Товары"
-    folder: "src/app/data/products" # Папка, где лежат товары (в формате .json)
-    create: true
-    slug: "{{fields.id}}" # Имя файла будет id товара
+    file: "src/app/data/products.json"
+    widget: "list"
     fields:
       - {label: "ID", name: "id", widget: "number"}
       - {label: "Название", name: "name", widget: "string"}

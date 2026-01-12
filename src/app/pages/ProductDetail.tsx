@@ -2,18 +2,25 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { motion } from 'motion/react';
 import { ArrowLeft, MessageCircle, ShoppingCart } from 'lucide-react';
 import { ImageWithFallback } from '../components/figma/ImageWithFallback';
-import products from '../data/products.json';
+import productsData from '../data/products.json';
 import { useCart } from '../context/CartContext';
 import { Button } from '../components/ui/button';
 import { toast } from 'sonner';
 import { useLayoutEffect } from 'react';
 
+const products = productsData.products;
+
 export function ProductDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { addToCart } = useCart();
-
+  
+  // Принудительный скролл наверх при открытии страницы товара
   useLayoutEffect(() => {
+    // Мгновенный скролл
+    window.scrollTo(0, 0);
+    
+    // Страховочный скролл через минимальную задержку, чтобы компенсировать возможные сдвиги верстки
     const timeout = setTimeout(() => {
         window.scrollTo(0, 0);
     }, 0);
