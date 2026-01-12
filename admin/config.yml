@@ -2,7 +2,6 @@ backend:
   name: github
   repo: etiterin/makishop
   branch: main
-  app_id: Ov23li5MBpIowbpNfJiR
 
 publish_mode: editorial_workflow
 media_folder: "public/images/uploads"
