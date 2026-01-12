@@ -1,0 +1,47 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Makinari Shop - Управление товарами</title>
+  <script src="https://unpkg.com/decap-cms@^3.0.0/dist/decap-cms.js"></script>
+  <script src="https://unpkg.com/decap-cms-app@^3.0.0/dist/decap-cms-app.js"></script>
+</head>
+<body>
+  <script>
+    const config = {
+      backend: {
+        name: "github",
+        repo: "etiterin/makishop",
+        branch: "main",
+        base_url: "https://api.decapcms.org",
+        auth_endpoint: "/api/auth",
+        cms_label_prefix: "decap-cms/",
+        app_id: "Ov23li5MBpIowbpNfJiR", // Your GitHub OAuth App Client ID
+      },
+      media_folder: "public/images/uploads",
+      public_folder: "/images/uploads",
+      collections: [
+        {
+          name: "products",
+          label: "Товары",
+          folder: "src/app/data/products",
+          create: true,
+          slug: "{{fields.id}}",
+          fields: [
+            {label: "ID", name: "id", widget: "number"},
+            {label: "Название", name: "name", widget: "string"},
+            {label: "Цена (например, 300 ₽)", name: "price", widget: "string"},
+            {label: "Категория", name: "category", widget: "select", options: ["sticker", "keychain", "set", "print"]},
+            {label: "Фандом", name: "fandom", widget: "select", options: ["Original", "Evangelion", "Pokemon", "Genshin Impact", "Other"], required: false},
+            {label: "Картинка", name: "image", widget: "image"},
+            {label: "Описание", name: "description", widget: "markdown"},
+            {label: "В наличии", name: "inStock", widget: "boolean", default: true}
+          ]
+        }
+      ]
+    };
+    DecapCmsApp.init({ config });
+  </script>
+</body>
+</html>
