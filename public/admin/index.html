@@ -4,9 +4,13 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Makinari Shop - Управление товарами</title>
+  <script>
+    window.CMS_MANUAL_INIT = true;
+  </script>
   <script src="https://unpkg.com/decap-cms@^3.0.0/dist/decap-cms.js"></script>
 </head>
 <body>
+  <div id="nc-root"></div>
   <script>
     var config = {
       backend: {
@@ -51,7 +55,11 @@
       ]
     };
 
-    CMS.init({ config });
+    window.addEventListener("load", function () {
+      if (window.CMS) {
+        window.CMS.init({ config });
+      }
+    });
   </script>
 </body>
 </html>
