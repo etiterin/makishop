@@ -2,10 +2,21 @@ import { useState } from 'react';
 import { motion } from 'motion/react';
 import { useNavigate } from 'react-router-dom';
 import { ImageWithFallback } from '../components/figma/ImageWithFallback';
-import { products, Product } from '../data/products';
+import products from '../data/products.json';
 import { ShoppingCart, Plus, Minus, Trash2 } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { toast } from 'sonner';
+
+export interface Product {
+  id: number;
+  name: string;
+  price: string;
+  category: 'sticker' | 'keychain' | 'set' | 'print';
+  fandom?: 'Original' | 'Evangelion' | 'Pokemon' | 'Genshin Impact' | 'Other';
+  image: string;
+  description: string;
+  inStock: boolean;
+}
 
 export function Shop() {
   const navigate = useNavigate();
@@ -13,7 +24,7 @@ export function Shop() {
   const [fandomFilter, setFandomFilter] = useState<'all' | 'Original' | 'Evangelion' | 'Pokemon'>('all');
   
   const getSortedProducts = () => {
-    let filtered = [...products];
+    let filtered: Product[] = [...products];
     
     // Filter by Category
     if (filter !== 'all') {
