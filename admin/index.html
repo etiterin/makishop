@@ -7,5 +7,50 @@
   <script src="https://unpkg.com/decap-cms@^3.0.0/dist/decap-cms.js"></script>
 </head>
 <body>
+  <script>
+    var config = {
+      backend: {
+        name: "github",
+        repo: "etiterin/makishop",
+        branch: "main",
+        app_id: "Ov23li5MBpIowbpNfJiR"
+      },
+      publish_mode: "editorial_workflow",
+      media_folder: "public/images/uploads",
+      public_folder: "/images/uploads",
+      collections: [
+        {
+          name: "settings",
+          label: "Управление сайтом",
+          files: [
+            {
+              name: "products",
+              label: "Товары",
+              file: "src/app/data/products.json",
+              fields: [
+                {
+                  name: "products",
+                  label: "Список товаров",
+                  widget: "list",
+                  fields: [
+                    {label: "ID", name: "id", widget: "number"},
+                    {label: "Название", name: "name", widget: "string"},
+                    {label: "Цена (например, 300 ₽)", name: "price", widget: "string"},
+                    {label: "Категория", name: "category", widget: "select", options: ["sticker", "keychain", "set", "print"]},
+                    {label: "Фандом", name: "fandom", widget: "select", options: ["Original", "Evangelion", "Pokemon", "Genshin Impact", "Other"], required: false},
+                    {label: "Картинка", name: "image", widget: "image"},
+                    {label: "Описание", name: "description", widget: "markdown"},
+                    {label: "В наличии", name: "inStock", widget: "boolean", default: true}
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    };
+
+    CMS.init({ config });
+  </script>
 </body>
 </html>
