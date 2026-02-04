@@ -69,6 +69,20 @@
         "/images/uploads/lis.jpg"
       ],
       "description": "Лисик пиписик"
+    },
+    {
+      "inStock": true,
+      "id": 6,
+      "name": "Лента Шелковая Сейлор Мун",
+      "price": 550,
+      "category": "ribbon",
+      "fandoms": [
+        "Fantasy"
+      ],
+      "images": [
+        "/images/uploads/sail.jpg"
+      ],
+      "description": "Лента пук"
     }
   ]
 }
