@@ -38,7 +38,9 @@
     },
     {
       "inStock": true,
-      "image": "/images/uploads/nan.jpg",
+      "images": [
+        "/images/uploads/nan.jpg"
+      ],
       "id": 4,
       "name": "Брелок на сияющем акриле Наначи",
       "price": "700",
