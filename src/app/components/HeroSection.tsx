@@ -16,7 +16,7 @@ export function HeroSection() {
       {/* Background artwork */}
       <div className="absolute inset-0 opacity-20">
         <ImageWithFallback
-          src="https://images.unsplash.com/photo-1628586431263-44040b966252?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxhcnRpc3QlMjB3b3Jrc3BhY2UlMjBkZXNrfGVufDF8fHx8MTc2NjMzNjk1NHww&ixlib.rb-4.1.0&q=80&w=1080"
+          src="/images/background.jpg"
           alt="Background"
           className="w-full h-full object-cover"
         />
