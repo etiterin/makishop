@@ -108,7 +108,7 @@ export function HeroSection() {
                   <div className="bg-card p-4 pb-16 rounded-2xl shadow-2xl hover:shadow-3xl transition-all duration-300 w-64 transform group-hover:-translate-y-2">
                     <div className="aspect-square bg-muted rounded-xl overflow-hidden">
                       <ImageWithFallback
-                        src={product.image}
+                        src={product.images[0]}
                         alt={product.name}
                         className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
                       />

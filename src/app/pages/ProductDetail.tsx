@@ -1,12 +1,12 @@
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion } from 'motion/react';
 import { ArrowLeft, MessageCircle, ShoppingCart } from 'lucide-react';
-import { ImageWithFallback } from '../components/figma/ImageWithFallback';
 import productsData from '../data/products.json';
 import { useCart } from '../context/CartContext';
 import { Button } from '../components/ui/button';
 import { toast } from 'sonner';
 import { useLayoutEffect } from 'react';
+import { ProductImageGallery } from '../components/ProductImageGallery';
 
 const products = productsData.products;
 
@@ -15,16 +15,11 @@ export function ProductDetail() {
   const navigate = useNavigate();
   const { addToCart } = useCart();
   
-  // Принудительный скролл наверх при открытии страницы товара
   useLayoutEffect(() => {
-    // Мгновенный скролл
     window.scrollTo(0, 0);
-    
-    // Страховочный скролл через минимальную задержку, чтобы компенсировать возможные сдвиги верстки
     const timeout = setTimeout(() => {
         window.scrollTo(0, 0);
     }, 0);
-    
     return () => clearTimeout(timeout);
   }, [id]);
 
@@ -54,7 +49,6 @@ export function ProductDetail() {
   return (
     <div className="min-h-screen pt-24 pb-20 px-6">
       <div className="max-w-6xl mx-auto">
-        {/* Back button */}
         <motion.button
           initial={{ opacity: 0, x: -20 }}
           animate={{ opacity: 1, x: 0 }}
@@ -66,40 +60,18 @@ export function ProductDetail() {
         </motion.button>
         
         <div className="grid md:grid-cols-2 gap-12">
-          {/* Image Gallery */}
           <motion.div
             initial={{ opacity: 0, x: -30 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.6 }}
-            className="space-y-6"
           >
-            <div className="relative aspect-square bg-card rounded-3xl overflow-hidden shadow-lg">
-              <ImageWithFallback
-                src={product.image}
-                alt={product.name}
-                className={`w-full h-full object-cover ${!product.inStock ? 'grayscale' : ''}`}
-              />
-              {!product.inStock && (
-                <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
-                    <span className="text-white font-semibold tracking-wider text-lg bg-black/50 px-4 py-2 rounded-lg">Нет в наличии</span>
-                </div>
-              )}
-            </div>
-            
-            {/* Additional images placeholder */}
-            <div className="grid grid-cols-3 gap-4">
-              {[1, 2, 3].map((i) => (
-                <div
-                  key={i}
-                  className="aspect-square bg-muted rounded-2xl flex items-center justify-center opacity-40"
-                >
-                  <span className="text-4xl">✨</span>
-                </div>
-              ))}
-            </div>
+            <ProductImageGallery 
+              images={product.images} 
+              productName={product.name} 
+              inStock={product.inStock} 
+            />
           </motion.div>
           
-          {/* Product Info */}
           <motion.div
             initial={{ opacity: 0, x: 30 }}
             animate={{ opacity: 1, x: 0 }}

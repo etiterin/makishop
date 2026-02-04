@@ -9,20 +9,33 @@ import { toast } from 'sonner';
 
 const products = productsData.products;
 
+// Define category types in one place for consistency
+type ProductCategory = 'sticker' | 'keychain' | 'set' | 'print' | 'textile' | 'ribbon';
+
 export interface Product {
   id: number;
   name: string;
   price: string;
-  category: 'sticker' | 'keychain' | 'set' | 'print';
+  category: ProductCategory;
   fandom?: 'Original' | 'Evangelion' | 'Pokemon' | 'Genshin Impact' | 'Other';
-  image: string;
+  images: string[];
   description: string;
   inStock: boolean;
 }
 
+// Map category values to Russian labels
+const categoryLabels: { [key in ProductCategory]: string } = {
+  sticker: 'Стикеры',
+  keychain: 'Брелоки',
+  set: 'Сеты',
+  print: 'Принты',
+  textile: 'Текстиль',
+  ribbon: 'Ленты'
+};
+
 export function Shop() {
   const navigate = useNavigate();
-  const [filter, setFilter] = useState<'all' | 'sticker' | 'keychain' | 'set' | 'print'>('all');
+  const [filter, setFilter] = useState<'all' | ProductCategory>('all');
   const [fandomFilter, setFandomFilter] = useState<'all' | 'Original' | 'Evangelion' | 'Pokemon'>('all');
   
   const getSortedProducts = () => {
@@ -53,6 +66,8 @@ export function Shop() {
     { value: 'keychain' as const, label: 'Брелоки' },
     { value: 'set' as const, label: 'Сеты' },
     { value: 'print' as const, label: 'Принты' },
+    { value: 'textile' as const, label: 'Текстиль' },
+    { value: 'ribbon' as const, label: 'Ленты' },
   ];
 
   const fandoms = [
@@ -65,7 +80,6 @@ export function Shop() {
   return (
     <div className="min-h-screen pt-24 pb-20 px-6">
       <div className="max-w-7xl mx-auto">
-        {/* Header - Убрана анимация появления */}
         <div className="mb-12 text-center">
           <h1 className="text-5xl mb-4">Коллекция</h1>
           <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
@@ -73,9 +87,7 @@ export function Shop() {
           </p>
         </div>
         
-        {/* Filters - Убрана анимация появления */}
         <div className="space-y-6 mb-16">
-            {/* Category Filters */}
             <div className="flex justify-center flex-wrap gap-3">
               {categories.map((cat) => (
                 <button
@@ -92,7 +104,6 @@ export function Shop() {
               ))}
             </div>
 
-             {/* Fandom Filters */}
             <div className="flex justify-center flex-wrap gap-2">
               <span className="text-sm font-medium text-muted-foreground self-center mr-2">Фандом:</span>
               {fandoms.map((fan) => (
@@ -111,7 +122,6 @@ export function Shop() {
             </div>
         </div>
         
-        {/* Product Grid */}
         {filteredProducts.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
               {filteredProducts.map((product, index) => (
@@ -166,10 +176,9 @@ function ProductCard({ product, index }: { product: Product; index: number }) {
       onClick={() => navigate(`/product/${product.id}`)}
       className="bg-card rounded-3xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 group flex flex-col cursor-pointer"
     >
-      {/* Image */}
       <div className="relative aspect-square bg-gradient-to-br from-muted to-accent/10 overflow-hidden">
         <ImageWithFallback
-          src={product.image}
+          src={product.images[0]}
           alt={product.name}
           className={`w-full h-full object-cover transition-transform duration-500 ${product.inStock ? 'group-hover:scale-110' : 'grayscale'}`}
         />
@@ -180,13 +189,12 @@ function ProductCard({ product, index }: { product: Product; index: number }) {
         )}
       </div>
       
-      {/* Details */}
       <div className="p-6 flex flex-col flex-grow">
         <div className="flex items-start justify-between gap-2">
           <h3 className="flex-1 leading-snug font-medium">{product.name}</h3>
           <div className="flex flex-col items-end gap-1">
                <span className={`px-2 py-0.5 rounded-full text-xs whitespace-nowrap ${!product.inStock ? 'bg-secondary text-secondary-foreground' : 'bg-accent/10 text-accent-foreground'}`}>
-                {product.category}
+                {categoryLabels[product.category] || product.category}
               </span>
               {product.fandom && (
                   <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-full">

@@ -6,14 +6,18 @@
       "price": "300 ₽",
       "category": "sticker",
       "fandom": "Pokemon",
-      "image": "/images/uploads/vap1.jpg",
+      "images": [
+        "/images/uploads/vap1.jpg"
+      ],
       "description": "Окунись в сияющий водоворот магии с этим набором голографических наклеек, посвящённых Вапореону! Качественная плёнка с радужным переливом. Формат А6, плоттерная резка.",
       "inStock": true
     },
     {
       "inStock": true,
       "id": 2,
-      "image": "/images/uploads/гача.jpg",
+      "images": [
+        "/images/uploads/гача.jpg"
+      ],
       "category": "keychain",
       "name": "Гача-брелок \"Восточные Символы\"",
       "price": "500",
@@ -27,7 +31,9 @@
       "price": "250",
       "category": "sticker",
       "fandom": "Other",
-      "image": "/images/uploads/sampo.jpg",
+      "images": [
+        "/images/uploads/sampo.jpg"
+      ],
       "description": "керпке"
     },
     {
