@@ -28,6 +28,9 @@ collections:
               - {label: "Цена (например, 300 ₽)", name: "price", widget: "string"}
               - {label: "Категория", name: "category", widget: "select", options: ["sticker", "keychain", "set", "print"]}
               - {label: "Фандом", name: "fandom", widget: "select", options: ["Original", "Evangelion", "Pokemon", "Genshin Impact", "Other"], required: false}
-              - {label: "Картинка", name: "image", widget: "image"}
+              - label: "Картинки"
+                name: "images"
+                widget: "list"
+                field: {label: "Картинка", name: "image", widget: "image"}
               - {label: "Описание", name: "description", widget: "markdown"}
               - {label: "В наличии", name: "inStock", widget: "boolean", default: true}
