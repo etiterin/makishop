@@ -5,7 +5,7 @@
       "name": "Голографические стикеры Вапореон",
       "price": 300,
       "category": "sticker",
-      "fandom": "Pokemon",
+      "fandoms": ["Pokemon"],
       "images": [
         "/images/uploads/vap1.jpg"
       ],
@@ -21,7 +21,7 @@
       "category": "keychain",
       "name": "Гача-брелок \"Восточные Символы\"",
       "price": 500,
-      "fandom": "Other",
+      "fandoms": ["Other"],
       "description": "Испытай удачу и узнай какой из шести Восточных покровителей присоединится к твоему путешествию."
     },
     {
@@ -30,7 +30,7 @@
       "name": "Стикерпак A6 Сампо Коски",
       "price": 250,
       "category": "sticker",
-      "fandom": "Other",
+      "fandoms": ["Honkai Star Rail"],
       "images": [
         "/images/uploads/sampo.jpg"
       ],
@@ -45,7 +45,7 @@
       "name": "Брелок на сияющем акриле Наначи",
       "price": 700,
       "category": "keychain",
-      "fandom": "Other",
+      "fandoms": ["Made in Abyss"],
       "description": "Наначи увушка"
     }
   ]

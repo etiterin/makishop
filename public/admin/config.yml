@@ -38,16 +38,28 @@ collections:
                   - {label: "Ленты", value: "ribbon"}
                   - {label: "Значки", value: "badge"}
                   - {label: "Свопки", value: "swap"}
-              - label: "Фандом"
-                name: "fandom"
-                widget: "select"
+              - label: "Фандомы"
+                name: "fandoms"
+                widget: "list"
                 required: false
-                options:
-                  - {label: "Ориджинал", value: "Original"}
-                  - {label: "Evangelion", value: "Evangelion"}
-                  - {label: "Pokemon", value: "Pokemon"}
-                  - {label: "Genshin Impact", value: "Genshin Impact"}
-                  - {label: "Другое", value: "Other"}
+                field:
+                  label: "Фандом"
+                  name: "fandom"
+                  widget: "select"
+                  options:
+                    - {label: "Ориджинал", value: "Original"}
+                    - {label: "Palworld", value: "Palworld"}
+                    - {label: "Honkai Star Rail", value: "Honkai Star Rail"}
+                    - {label: "Монолог Фармацевта", value: "Monologue Apothecary"}
+                    - {label: "Made in Abyss", value: "Made in Abyss"}
+                    - {label: "Животные", value: "Animals"}
+                    - {label: "Крипота", value: "Creepy"}
+                    - {label: "Фентези", value: "Fantasy"}
+                    - {label: "Природа", value: "Nature"}
+                    - {label: "Evangelion", value: "Evangelion"}
+                    - {label: "Pokemon", value: "Pokemon"}
+                    - {label: "Genshin Impact", value: "Genshin Impact"}
+                    - {label: "Другое", value: "Other"}
               - label: "Картинки"
                 name: "images"
                 widget: "list"
