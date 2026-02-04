@@ -31,7 +31,7 @@ export function Delivery() {
             <div className="flex items-center gap-4 mb-6">
               <Mail className="w-8 h-8 text-accent-foreground" />
               <div>
-                <h2 className="text-2xl sm:text-3xl">✉️ Письма</h2>
+                <h2 className="text-2xl sm:text-3xl">Письма</h2>
                 <p className="text-muted-foreground">Для стикеров и прочей печатной продукции.</p>
               </div>
             </div>
@@ -57,7 +57,7 @@ export function Delivery() {
             <div className="flex items-center gap-4 mb-6">
               <Package className="w-8 h-8 text-accent-foreground" />
               <div>
-                <h2 className="text-2xl sm:text-3xl">📦 Посылки</h2>
+                <h2 className="text-2xl sm:text-3xl">Посылки</h2>
                 <p className="text-muted-foreground">Для брелоков, шоперов и не-печатной продукции.</p>
               </div>
             </div>
@@ -78,7 +78,7 @@ export function Delivery() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.6 }}
-            className="p-8 bg-muted/50 rounded-3xl"
+            className="p-8 bg-card rounded-3xl shadow-sm"
           >
             <div className="flex items-start gap-4 mb-4">
               <CreditCard className="w-8 h-8 text-primary mt-1 flex-shrink-0" />
