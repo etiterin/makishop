@@ -36,7 +36,16 @@ collections:
                   - {label: "Принты", value: "print"}
                   - {label: "Текстиль", value: "textile"}
                   - {label: "Ленты", value: "ribbon"}
-              - {label: "Фандом", name: "fandom", widget: "select", options: ["Original", "Evangelion", "Pokemon", "Genshin Impact", "Other"], required: false}
+              - label: "Фандом"
+                name: "fandom"
+                widget: "select"
+                required: false
+                options:
+                  - {label: "Ориджинал", value: "Original"}
+                  - {label: "Evangelion", value: "Evangelion"}
+                  - {label: "Pokemon", value: "Pokemon"}
+                  - {label: "Genshin Impact", value: "Genshin Impact"}
+                  - {label: "Другое", value: "Other"}
               - label: "Картинки"
                 name: "images"
                 widget: "list"

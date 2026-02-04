@@ -9,21 +9,22 @@ import { toast } from 'sonner';
 
 const products = productsData.products;
 
-// Define category types in one place for consistency
+// Define types in one place for consistency
 type ProductCategory = 'sticker' | 'keychain' | 'set' | 'print' | 'textile' | 'ribbon';
+type ProductFandom = 'Original' | 'Evangelion' | 'Pokemon' | 'Genshin Impact' | 'Other';
 
 export interface Product {
   id: number;
   name: string;
   price: string;
   category: ProductCategory;
-  fandom?: 'Original' | 'Evangelion' | 'Pokemon' | 'Genshin Impact' | 'Other';
+  fandom?: ProductFandom;
   images: string[];
   description: string;
   inStock: boolean;
 }
 
-// Map category values to Russian labels
+// Map values to Russian labels
 const categoryLabels: { [key in ProductCategory]: string } = {
   sticker: 'Стикеры',
   keychain: 'Брелоки',
@@ -33,25 +34,30 @@ const categoryLabels: { [key in ProductCategory]: string } = {
   ribbon: 'Ленты'
 };
 
+const fandomLabels: { [key in ProductFandom]: string } = {
+  Original: 'Ориджинал',
+  Evangelion: 'Evangelion',
+  Pokemon: 'Pokemon',
+  'Genshin Impact': 'Genshin Impact',
+  Other: 'Другое'
+};
+
 export function Shop() {
   const navigate = useNavigate();
   const [filter, setFilter] = useState<'all' | ProductCategory>('all');
-  const [fandomFilter, setFandomFilter] = useState<'all' | 'Original' | 'Evangelion' | 'Pokemon'>('all');
+  const [fandomFilter, setFandomFilter] = useState<'all' | ProductFandom>('all');
   
   const getSortedProducts = () => {
     let filtered: Product[] = [...products];
     
-    // Filter by Category
     if (filter !== 'all') {
         filtered = filtered.filter((p) => p.category === filter);
     }
 
-    // Filter by Fandom
     if (fandomFilter !== 'all') {
         filtered = filtered.filter((p) => p.fandom === fandomFilter);
     }
     
-    // Sort by Stock
     return filtered.sort((a, b) => {
       if (a.inStock === b.inStock) return 0;
       return a.inStock ? -1 : 1;
@@ -75,6 +81,8 @@ export function Shop() {
       { value: 'Original' as const, label: 'Ориджинал' },
       { value: 'Evangelion' as const, label: 'Evangelion' },
       { value: 'Pokemon' as const, label: 'Pokemon' },
+      { value: 'Genshin Impact' as const, label: 'Genshin Impact' },
+      { value: 'Other' as const, label: 'Другое' },
   ];
   
   return (
@@ -198,7 +206,7 @@ function ProductCard({ product, index }: { product: Product; index: number }) {
               </span>
               {product.fandom && (
                   <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-full">
-                      {product.fandom}
+                      {fandomLabels[product.fandom] || product.fandom}
                   </span>
               )}
           </div>
