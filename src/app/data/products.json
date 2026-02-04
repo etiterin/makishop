@@ -19,6 +19,16 @@
       "price": "500",
       "fandom": "Other",
       "description": "Испытай удачу и узнай какой из шести Восточных покровителей присоединится к твоему путешествию."
+    },
+    {
+      "inStock": true,
+      "id": 3,
+      "name": "Стикерпак A6 Сампо Коски",
+      "price": "250",
+      "category": "sticker",
+      "fandom": "Other",
+      "image": "/images/uploads/sampo.jpg",
+      "description": "керпке"
     }
   ]
 }
