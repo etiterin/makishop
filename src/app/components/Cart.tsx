@@ -9,15 +9,14 @@ export const Cart = () => {
   const { cartItems, addToCart, decreaseQuantity, removeFromCart, clearCart } = useCart();
 
   const total = cartItems.reduce((acc, item) => {
-    // Удаляем все нечисловые символы, кроме точки, чтобы получить цену
-    const price = parseFloat(item.price.replace(/[^0-9.]/g, ''));
-    return acc + price * item.quantity;
+    // Price is now a number, so we can use it directly
+    return acc + item.price * item.quantity;
   }, 0);
 
   const checkoutMessage = () => {
     let message = "Привет! Я хочу оформить заказ:\n\n";
     cartItems.forEach(item => {
-      message += `- ${item.name} (x${item.quantity}) - ${item.price}\n`;
+      message += `- ${item.name} (x${item.quantity}) - ${item.price} ₽\n`;
     });
     message += `\nИтого: ${total} ₽`;
     return message;
@@ -32,9 +31,6 @@ export const Cart = () => {
             icon: <Check className="w-4 h-4 text-green-500" />,
             duration: 5000,
         });
-        
-        // Опционально: можно предложить сразу открыть Telegram
-        // window.open('https://t.me/makinari_art', '_blank');
     });
   };
 
@@ -68,10 +64,10 @@ export const Cart = () => {
                      <div className="space-y-4">
                          {cartItems.map((item) => (
                              <div key={item.id} className="flex gap-4 items-center border-b pb-4">
-                                 <img src={item.image} alt={item.name} className="h-16 w-16 object-cover rounded-md" />
+                                 <img src={item.images[0]} alt={item.name} className="h-16 w-16 object-cover rounded-md" />
                                  <div className="flex-1">
                                      <h4 className="font-medium text-sm">{item.name}</h4>
-                                     <p className="text-sm text-muted-foreground">{item.price}</p>
+                                     <p className="text-sm text-muted-foreground">{item.price} ₽</p>
                                      <div className="flex items-center gap-2 mt-2">
                                          <Button
                                              variant="outline"
