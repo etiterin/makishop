@@ -5,6 +5,7 @@ import { Shop } from './pages/Shop';
 import { ProductDetail } from './pages/ProductDetail';
 import { About } from './pages/About';
 import { Contact } from './pages/Contact';
+import { Delivery } from './pages/Delivery';
 import { CartProvider } from './context/CartContext';
 import { ScrollToTop } from './components/ScrollToTop';
 import { Toaster } from 'sonner';
@@ -23,6 +24,7 @@ export default function App() {
             <Route path="/product/:id" element={<ProductDetail />} />
             <Route path="/about" element={<About />} />
             <Route path="/contact" element={<Contact />} />
+            <Route path="/delivery" element={<Delivery />} />
             {/* Catch-all route for 404 */}
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
