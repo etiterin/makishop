@@ -10,7 +10,7 @@ import { toast } from 'sonner';
 const products = productsData.products;
 
 // Define types in one place for consistency
-type ProductCategory = 'sticker' | 'keychain' | 'set' | 'print' | 'textile' | 'ribbon';
+type ProductCategory = 'sticker' | 'keychain' | 'set' | 'print' | 'textile' | 'ribbon' | 'badge' | 'swap';
 type ProductFandom = 'Original' | 'Evangelion' | 'Pokemon' | 'Genshin Impact' | 'Other';
 
 export interface Product {
@@ -31,7 +31,9 @@ const categoryLabels: { [key in ProductCategory]: string } = {
   set: 'Сеты',
   print: 'Принты',
   textile: 'Текстиль',
-  ribbon: 'Ленты'
+  ribbon: 'Ленты',
+  badge: 'Значки',
+  swap: 'Свопки'
 };
 
 const fandomLabels: { [key in ProductFandom]: string } = {
@@ -74,6 +76,8 @@ export function Shop() {
     { value: 'print' as const, label: 'Принты' },
     { value: 'textile' as const, label: 'Текстиль' },
     { value: 'ribbon' as const, label: 'Ленты' },
+    { value: 'badge' as const, label: 'Значки' },
+    { value: 'swap' as const, label: 'Свопки' },
   ];
 
   const fandoms = [

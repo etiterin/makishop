@@ -36,6 +36,8 @@ collections:
                   - {label: "Принты", value: "print"}
                   - {label: "Текстиль", value: "textile"}
                   - {label: "Ленты", value: "ribbon"}
+                  - {label: "Значки", value: "badge"}
+                  - {label: "Свопки", value: "swap"}
               - label: "Фандом"
                 name: "fandom"
                 widget: "select"
