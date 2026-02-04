@@ -16,7 +16,7 @@ type ProductFandom = 'Original' | 'Evangelion' | 'Pokemon' | 'Genshin Impact' | 
 export interface Product {
   id: number;
   name: string;
-  price: string;
+  price: number;
   category: ProductCategory;
   fandom?: ProductFandom;
   images: string[];
@@ -213,7 +213,7 @@ function ProductCard({ product, index }: { product: Product; index: number }) {
         </div>
         
         <div className="flex items-center justify-between mt-auto pt-4">
-          <p className={`text-xl font-semibold ${!product.inStock ? 'text-muted-foreground line-through' : 'text-foreground'}`}>{product.price}</p>
+          <p className={`text-xl font-semibold ${!product.inStock ? 'text-muted-foreground line-through' : 'text-foreground'}`}>{product.price} ₽</p>
 
           <div className="flex items-center justify-end h-10">
             {product.inStock ? (

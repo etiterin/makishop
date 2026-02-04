@@ -10,6 +10,17 @@ import { ProductImageGallery } from '../components/ProductImageGallery';
 
 const products = productsData.products;
 
+// Re-using the category -> label mapping from Shop.tsx would be ideal, 
+// but for a quick fix, a simple mapping here is fine.
+const categoryLabels: { [key: string]: string } = {
+  sticker: 'Стикеры',
+  keychain: 'Брелоки',
+  set: 'Сеты',
+  print: 'Принты',
+  textile: 'Текстиль',
+  ribbon: 'Ленты'
+};
+
 export function ProductDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -82,11 +93,11 @@ export function ProductDetail() {
               <div className="flex items-start justify-between gap-4">
                 <h1 className="text-4xl">{product.name}</h1>
                 <span className={`px-4 py-2 rounded-full text-sm ${!product.inStock ? 'bg-secondary text-secondary-foreground' : 'bg-accent/20 text-accent-foreground'}`}>
-                  {product.category}
+                  {categoryLabels[product.category] || product.category}
                 </span>
               </div>
               
-              <p className={`text-3xl ${!product.inStock ? 'text-muted-foreground line-through' : 'text-accent-foreground'}`}>{product.price}</p>
+              <p className={`text-3xl ${!product.inStock ? 'text-muted-foreground line-through' : 'text-accent-foreground'}`}>{product.price} ₽</p>
             </div>
             
             <div className="prose prose-lg">

@@ -25,7 +25,7 @@ collections:
             fields:
               - {label: "ID", name: "id", widget: "number"}
               - {label: "Название", name: "name", widget: "string"}
-              - {label: "Цена (например, 300 ₽)", name: "price", widget: "string"}
+              - {label: "Цена (только число)", name: "price", widget: "number"}
               - label: "Категория"
                 name: "category"
                 widget: "select"
