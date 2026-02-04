@@ -5,7 +5,9 @@
       "name": "Голографические стикеры Вапореон",
       "price": 300,
       "category": "sticker",
-      "fandoms": ["Pokemon"],
+      "fandoms": [
+        "Pokemon"
+      ],
       "images": [
         "/images/uploads/vap1.jpg"
       ],
@@ -21,7 +23,9 @@
       "category": "keychain",
       "name": "Гача-брелок \"Восточные Символы\"",
       "price": 500,
-      "fandoms": ["Other"],
+      "fandoms": [
+        "Other"
+      ],
       "description": "Испытай удачу и узнай какой из шести Восточных покровителей присоединится к твоему путешествию."
     },
     {
@@ -30,7 +34,9 @@
       "name": "Стикерпак A6 Сампо Коски",
       "price": 250,
       "category": "sticker",
-      "fandoms": ["Honkai Star Rail"],
+      "fandoms": [
+        "Honkai Star Rail"
+      ],
       "images": [
         "/images/uploads/sampo.jpg"
       ],
@@ -45,8 +51,38 @@
       "name": "Брелок на сияющем акриле Наначи",
       "price": 700,
       "category": "keychain",
-      "fandoms": ["Made in Abyss"],
+      "fandoms": [
+        "Made in Abyss"
+      ],
       "description": "Наначи увушка"
+    },
+    {
+      "inStock": true,
+      "id": 5,
+      "name": "Брелок Silent Hill Лис",
+      "price": 750,
+      "category": "keychain",
+      "fandoms": [
+        "Creepy"
+      ],
+      "images": [
+        "/images/uploads/lis.jpg"
+      ],
+      "description": "Лисик пиписик"
+    },
+    {
+      "inStock": true,
+      "id": 6,
+      "name": "Лента Шелковая Сейлор Мун",
+      "price": 550,
+      "category": "ribbon",
+      "fandoms": [
+        "Fantasy"
+      ],
+      "images": [
+        "/images/uploads/sail.jpg"
+      ],
+      "description": "Лента пук"
     }
   ]
 }
