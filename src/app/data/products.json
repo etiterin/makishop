@@ -146,6 +146,22 @@
         "/images/uploads/img_2193.png"
       ],
       "description": "ааа"
+    },
+    {
+      "inStock": true,
+      "id": 11,
+      "images": [
+        "/images/uploads/img_2201.png",
+        "/images/uploads/img_2202.png"
+      ],
+      "name": "Стикеры Снежные Эльфы",
+      "price": 150,
+      "category": "sticker",
+      "fandoms": [
+        "Original",
+        "Fantasy"
+      ],
+      "description": "аа"
     }
   ]
 }
