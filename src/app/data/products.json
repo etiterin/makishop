@@ -83,6 +83,19 @@
         "/images/uploads/sail.jpg"
       ],
       "description": "Лента пук"
+    },
+    {
+      "inStock": true,
+      "id": 7,
+      "name": "Стикеры Спирит",
+      "price": 200,
+      "category": "sticker",
+      "fandoms": [
+        "Animals"
+      ],
+      "images": [
+        "/images/uploads/img_2188.png"
+      ]
     }
   ]
 }
