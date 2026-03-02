@@ -113,6 +113,21 @@
         "/images/uploads/img_2195.png",
         "/images/uploads/img_2196.png"
       ]
+    },
+    {
+      "inStock": true,
+      "id": 9,
+      "name": "Стикеры Нулевые",
+      "price": 300,
+      "category": "sticker",
+      "fandoms": [
+        "Original",
+        "Animals"
+      ],
+      "images": [
+        "/images/uploads/img_2190.png",
+        "/images/uploads/img_2189.png"
+      ]
     }
   ]
 }
