@@ -97,6 +97,22 @@
         "/images/uploads/img_2188.png",
         "/images/uploads/img_2187.png"
       ]
+    },
+    {
+      "inStock": true,
+      "id": 8,
+      "name": "Стикеры Мелоди",
+      "price": 200,
+      "category": "sticker",
+      "fandoms": [
+        "Original",
+        "Fantasy",
+        "Nature"
+      ],
+      "images": [
+        "/images/uploads/img_2195.png",
+        "/images/uploads/img_2196.png"
+      ]
     }
   ]
 }
