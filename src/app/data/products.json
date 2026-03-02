@@ -162,6 +162,23 @@
         "Fantasy"
       ],
       "description": "аа"
+    },
+    {
+      "inStock": true,
+      "id": 12,
+      "name": "Обложка на паспорт Гранатовая Ведьма",
+      "price": 500,
+      "category": "textile",
+      "fandoms": [
+        "Original",
+        "Creepy",
+        "Fantasy"
+      ],
+      "images": [
+        "/images/uploads/img_2192.png",
+        "/images/uploads/img_2191.png"
+      ],
+      "description": "аа"
     }
   ]
 }
