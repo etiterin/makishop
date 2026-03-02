@@ -96,7 +96,8 @@
       "images": [
         "/images/uploads/img_2188.png",
         "/images/uploads/img_2187.png"
-      ]
+      ],
+      "description": "ааа"
     },
     {
       "inStock": true,
@@ -112,7 +113,8 @@
       "images": [
         "/images/uploads/img_2195.png",
         "/images/uploads/img_2196.png"
-      ]
+      ],
+      "description": "ааа"
     },
     {
       "inStock": true,
@@ -127,11 +129,12 @@
       "images": [
         "/images/uploads/img_2190.png",
         "/images/uploads/img_2189.png"
-      ]
+      ],
+      "description": "ааа"
     },
     {
       "inStock": true,
-      "id": 7,
+      "id": 10,
       "name": "Стикеры Монолог Фармацевта",
       "price": 200,
       "category": "sticker",
@@ -141,7 +144,8 @@
       "images": [
         "/images/uploads/img_2194.png",
         "/images/uploads/img_2193.png"
-      ]
+      ],
+      "description": "ааа"
     }
   ]
 }
