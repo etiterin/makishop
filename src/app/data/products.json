@@ -146,6 +146,39 @@
         "/images/uploads/img_2193.png"
       ],
       "description": "ааа"
+    },
+    {
+      "inStock": true,
+      "id": 11,
+      "images": [
+        "/images/uploads/img_2201.png",
+        "/images/uploads/img_2202.png"
+      ],
+      "name": "Стикеры Снежные Эльфы",
+      "price": 150,
+      "category": "sticker",
+      "fandoms": [
+        "Original",
+        "Fantasy"
+      ],
+      "description": "аа"
+    },
+    {
+      "inStock": true,
+      "id": 12,
+      "name": "Обложка на паспорт Гранатовая Ведьма",
+      "price": 500,
+      "category": "textile",
+      "fandoms": [
+        "Original",
+        "Creepy",
+        "Fantasy"
+      ],
+      "images": [
+        "/images/uploads/img_2192.png",
+        "/images/uploads/img_2191.png"
+      ],
+      "description": "аа"
     }
   ]
 }
