@@ -10,6 +10,8 @@ interface ProductImageGalleryProps {
 
 export function ProductImageGallery({ images, productName, inStock }: ProductImageGalleryProps) {
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
+  const [isZoomed, setIsZoomed] = useState(false);
+  const [zoomPosition, setZoomPosition] = useState({ x: 50, y: 50 });
   const selectedImage = images[selectedImageIndex] ?? images[0] ?? '';
   const hasMultipleImages = images.length > 1;
 
@@ -21,6 +23,13 @@ export function ProductImageGallery({ images, productName, inStock }: ProductIma
   const showNextImage = () => {
     if (!hasMultipleImages) return;
     setSelectedImageIndex((prev) => (prev + 1) % images.length);
+  };
+
+  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    const bounds = e.currentTarget.getBoundingClientRect();
+    const x = ((e.clientX - bounds.left) / bounds.width) * 100;
+    const y = ((e.clientY - bounds.top) / bounds.height) * 100;
+    setZoomPosition({ x, y });
   };
 
   if (!images || images.length === 0) {
@@ -39,11 +48,20 @@ export function ProductImageGallery({ images, productName, inStock }: ProductIma
 
   return (
     <div className="space-y-6">
-      <div className="relative aspect-square bg-card rounded-3xl overflow-hidden shadow-lg">
+      <div
+        className="relative aspect-square bg-card rounded-3xl overflow-hidden shadow-lg cursor-zoom-in"
+        onMouseEnter={() => setIsZoomed(true)}
+        onMouseLeave={() => setIsZoomed(false)}
+        onMouseMove={handleMouseMove}
+      >
         <ImageWithFallback
           src={selectedImage}
           alt={productName}
-          className={`w-full h-full object-cover transition-opacity duration-300 ${!inStock ? 'grayscale' : ''}`}
+          className={`w-full h-full object-cover transition-[transform,opacity] duration-200 ease-out ${!inStock ? 'grayscale' : ''}`}
+          style={{
+            transformOrigin: `${zoomPosition.x}% ${zoomPosition.y}%`,
+            transform: isZoomed ? 'scale(1.9)' : 'scale(1)',
+          }}
         />
         {hasMultipleImages && (
           <>
