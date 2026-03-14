@@ -3,7 +3,16 @@ import { motion } from 'motion/react';
 import { useNavigate } from 'react-router-dom';
 import { ImageWithFallback } from '../components/figma/ImageWithFallback';
 import productsData from '../data/products.json';
-import { ShoppingCart, Plus, Minus, Trash2, ChevronDown, SlidersHorizontal } from 'lucide-react';
+import {
+  ShoppingCart,
+  Plus,
+  Minus,
+  Trash2,
+  ChevronDown,
+  SlidersHorizontal,
+  ChevronLeft,
+  ChevronRight,
+} from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { toast } from 'sonner';
 import type { Product, ProductCategory, ProductFandom } from '../types/product';
@@ -165,10 +174,24 @@ function ProductCard({ product }: { product: Product }) {
   const navigate = useNavigate();
   const { cartItems, addToCart, decreaseQuantity, removeFromCart } = useCart();
   const itemInCart = cartItems.find((item) => item.id === product.id);
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const totalImages = product.images.length;
+  const hasMultipleImages = totalImages > 1;
+  const currentImage = product.images[currentImageIndex] ?? product.images[0] ?? '';
 
   const handleAction = (e: React.MouseEvent, action: () => void) => {
     e.stopPropagation();
     action();
+  };
+
+  const showPreviousImage = () => {
+    if (!hasMultipleImages) return;
+    setCurrentImageIndex((prev) => (prev - 1 + totalImages) % totalImages);
+  };
+
+  const showNextImage = () => {
+    if (!hasMultipleImages) return;
+    setCurrentImageIndex((prev) => (prev + 1) % totalImages);
   };
 
   return (
@@ -178,9 +201,42 @@ function ProductCard({ product }: { product: Product }) {
       className="bg-card rounded-3xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 group flex flex-col cursor-pointer"
     >
       <div className="relative aspect-square bg-gradient-to-br from-muted to-accent/10 overflow-hidden">
-        <ImageWithFallback src={product.images[0]} alt={product.name} className={`w-full h-full object-cover transition-transform duration-500 ${product.inStock ? 'group-hover:scale-110' : 'grayscale'}`} />
+        <ImageWithFallback src={currentImage} alt={product.name} className={`w-full h-full object-cover transition-transform duration-500 ${product.inStock ? 'group-hover:scale-110' : 'grayscale'}`} />
+
+        {hasMultipleImages && (
+          <>
+            <button
+              type="button"
+              onClick={(e) => handleAction(e, showPreviousImage)}
+              className="absolute left-2 top-1/2 -translate-y-1/2 z-20 w-8 h-8 rounded-full bg-black/18 text-white/80 flex items-center justify-center backdrop-blur-[1px] hover:bg-black/28 hover:text-white transition-colors"
+              aria-label="Предыдущее фото"
+            >
+              <ChevronLeft className="w-4 h-4" />
+            </button>
+            <button
+              type="button"
+              onClick={(e) => handleAction(e, showNextImage)}
+              className="absolute right-2 top-1/2 -translate-y-1/2 z-20 w-8 h-8 rounded-full bg-black/18 text-white/80 flex items-center justify-center backdrop-blur-[1px] hover:bg-black/28 hover:text-white transition-colors"
+              aria-label="Следующее фото"
+            >
+              <ChevronRight className="w-4 h-4" />
+            </button>
+            <div className="absolute bottom-2 left-1/2 -translate-x-1/2 z-20 flex items-center gap-1.5 px-2 py-1 rounded-full bg-black/35">
+              {product.images.map((_, index) => (
+                <button
+                  type="button"
+                  key={`${product.id}-dot-${index}`}
+                  onClick={(e) => handleAction(e, () => setCurrentImageIndex(index))}
+                  className={`w-1.5 h-1.5 rounded-full transition-all ${index === currentImageIndex ? 'bg-white w-3' : 'bg-white/60 hover:bg-white/90'}`}
+                  aria-label={`Показать фото ${index + 1}`}
+                />
+              ))}
+            </div>
+          </>
+        )}
+
         {!product.inStock && (
-             <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
+             <div className="absolute inset-0 z-10 bg-black/40 flex items-center justify-center">
                 <span className="text-white font-semibold tracking-wider text-lg bg-black/50 px-4 py-2 rounded-lg">Нет в наличии</span>
             </div>
         )}
