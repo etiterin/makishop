@@ -3,7 +3,7 @@ import { motion } from 'motion/react';
 import { useNavigate } from 'react-router-dom';
 import { ImageWithFallback } from '../components/figma/ImageWithFallback';
 import productsData from '../data/products.json';
-import { ShoppingCart, Plus, Minus, Trash2 } from 'lucide-react';
+import { ShoppingCart, Plus, Minus, Trash2, ChevronDown, SlidersHorizontal } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { toast } from 'sonner';
 
@@ -46,6 +46,7 @@ export function Shop() {
   const navigate = useNavigate();
   const [filter, setFilter] = useState<'all' | ProductCategory>('all');
   const [fandomFilter, setFandomFilter] = useState<'all' | ProductFandom>('all');
+  const [areFiltersOpen, setAreFiltersOpen] = useState(false);
   
   const getSortedProducts = () => {
     let filtered: Product[] = [...products];
@@ -72,6 +73,11 @@ export function Shop() {
 
   const fandoms = Object.entries(fandomLabels).map(([value, label]) => ({ value: value as ProductFandom, label }));
   fandoms.unshift({ value: 'all', label: 'Все фандомы' });
+
+  const hasActiveFilters = filter !== 'all' || fandomFilter !== 'all';
+  const activeFilterCount = Number(filter !== 'all') + Number(fandomFilter !== 'all');
+  const selectedCategoryLabel = filter === 'all' ? 'Все товары' : categoryLabels[filter];
+  const selectedFandomLabel = fandomFilter === 'all' ? 'Все фандомы' : fandomLabels[fandomFilter];
   
   return (
     <div className="min-h-screen pt-24 pb-20 px-6">
@@ -83,35 +89,81 @@ export function Shop() {
           </p>
         </div>
         
-        <div className="space-y-6 mb-16">
-            <div className="flex justify-center flex-wrap gap-3">
-              {categories.map((cat) => (
-                <button
-                  key={cat.value}
-                  onClick={() => setFilter(cat.value)}
-                  className={`px-6 py-2 rounded-full transition-all duration-200 border border-transparent ${
-                    filter === cat.value ? 'bg-primary text-primary-foreground shadow-md' : 'bg-muted text-muted-foreground hover:bg-muted/80'
-                  }`}
-                >
-                  {cat.label}
-                </button>
-              ))}
+        <div className="mb-16 bg-card rounded-3xl border border-border/60 shadow-sm p-4 sm:p-6">
+          <button
+            type="button"
+            onClick={() => setAreFiltersOpen((prev) => !prev)}
+            aria-expanded={areFiltersOpen}
+            className="w-full flex items-center justify-between gap-4 rounded-2xl px-4 py-3 hover:bg-muted/40 transition-colors"
+          >
+            <div className="flex items-center gap-3">
+              <span className="w-9 h-9 rounded-full bg-accent/20 text-accent-foreground inline-flex items-center justify-center">
+                <SlidersHorizontal className="w-4 h-4" />
+              </span>
+              <div className="text-left">
+                <p className="font-medium">Категории и фильтры</p>
+                <p className="text-sm text-muted-foreground">
+                  {hasActiveFilters ? `Активно фильтров: ${activeFilterCount}` : 'Фильтры не выбраны'}
+                </p>
+              </div>
             </div>
+            <ChevronDown className={`w-5 h-5 text-muted-foreground transition-transform ${areFiltersOpen ? 'rotate-180' : ''}`} />
+          </button>
 
-            <div className="flex justify-center flex-wrap gap-2">
-              <span className="text-sm font-medium text-muted-foreground self-center mr-2">Фандом:</span>
-              {fandoms.map((fan) => (
-                <button
-                  key={fan.value}
-                  onClick={() => setFandomFilter(fan.value)}
-                  className={`px-4 py-1.5 rounded-full text-sm transition-all duration-200 border ${
-                    fandomFilter === fan.value ? 'bg-accent/20 border-accent text-accent-foreground font-medium' : 'bg-transparent border-border text-muted-foreground hover:border-accent/50'
-                  }`}
-                >
-                  {fan.label}
-                </button>
-              ))}
+          {hasActiveFilters && (
+            <div className="flex flex-wrap items-center gap-2 px-4 pt-3">
+              <span className="text-xs px-3 py-1 rounded-full bg-muted text-muted-foreground">{selectedCategoryLabel}</span>
+              <span className="text-xs px-3 py-1 rounded-full bg-muted text-muted-foreground">{selectedFandomLabel}</span>
             </div>
+          )}
+
+          {areFiltersOpen && (
+            <div className="space-y-6 pt-6">
+              <div className="flex justify-center flex-wrap gap-3">
+                {categories.map((cat) => (
+                  <button
+                    key={cat.value}
+                    onClick={() => setFilter(cat.value)}
+                    className={`px-6 py-2 rounded-full transition-all duration-200 border border-transparent ${
+                      filter === cat.value ? 'bg-primary text-primary-foreground shadow-md' : 'bg-muted text-muted-foreground hover:bg-muted/80'
+                    }`}
+                  >
+                    {cat.label}
+                  </button>
+                ))}
+              </div>
+
+              <div className="flex justify-center flex-wrap gap-2">
+                <span className="text-sm font-medium text-muted-foreground self-center mr-2">Фандом:</span>
+                {fandoms.map((fan) => (
+                  <button
+                    key={fan.value}
+                    onClick={() => setFandomFilter(fan.value)}
+                    className={`px-4 py-1.5 rounded-full text-sm transition-all duration-200 border ${
+                      fandomFilter === fan.value ? 'bg-accent/20 border-accent text-accent-foreground font-medium' : 'bg-transparent border-border text-muted-foreground hover:border-accent/50'
+                    }`}
+                  >
+                    {fan.label}
+                  </button>
+                ))}
+              </div>
+
+              {hasActiveFilters && (
+                <div className="text-center">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setFilter('all');
+                      setFandomFilter('all');
+                    }}
+                    className="text-sm text-accent hover:underline"
+                  >
+                    Сбросить фильтры
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
         </div>
         
         {filteredProducts.length > 0 ? (
