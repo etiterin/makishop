@@ -17,6 +17,13 @@ const categoryLabels: { [key in ProductCategory]: string } = {
   badge: 'Значки', swap: 'Свопки', other: 'Другое'
 };
 
+const defaultDetailsItems = [
+  'Сделано вручную с любовью',
+  'Оригинальный дизайн',
+  'Качественные материалы',
+  'Водостойкий и прочный',
+];
+
 export function ProductDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -48,6 +55,14 @@ export function ProductDetail() {
       addToCart(product);
       toast.success(`${product.name} добавлен в корзину`);
   };
+
+  const description = product.description?.trim();
+  const hasCustomDetails =
+    typeof product.detailsTitle !== 'undefined' || typeof product.detailsItems !== 'undefined';
+  const detailsTitle = product.detailsTitle?.trim() || 'Детали';
+  const detailsItems = (hasCustomDetails ? (product.detailsItems ?? []) : defaultDetailsItems)
+    .map((item) => item.trim())
+    .filter(Boolean);
   
   return (
     <div className="min-h-screen pt-24 pb-20 px-4 sm:px-6">
@@ -84,7 +99,7 @@ export function ProductDetail() {
             <div className="space-y-3">
               <div className="flex items-start justify-between gap-4">
                 <h1 className="text-3xl md:text-4xl break-words">{product.name}</h1>
-                <span className="px-3 py-1.5 rounded-full text-xs sm:text-sm whitespace-nowrap mt-1 ${!product.inStock ? 'bg-secondary text-secondary-foreground' : 'bg-accent/20 text-accent-foreground'}">
+                <span className={`px-3 py-1.5 rounded-full text-xs sm:text-sm whitespace-nowrap mt-1 ${!product.inStock ? 'bg-secondary text-secondary-foreground' : 'bg-accent/20 text-accent-foreground'}`}>
                   {categoryLabels[product.category] || product.category}
                 </span>
               </div>
@@ -92,22 +107,25 @@ export function ProductDetail() {
               <p className={`text-2xl md:text-3xl ${!product.inStock ? 'text-muted-foreground line-through' : 'text-accent-foreground'}`}>{product.price} ₽</p>
             </div>
             
-            <div className="prose prose-base md:prose-lg">
-              <p className="text-muted-foreground leading-relaxed">
-                {product.description}
-              </p>
-            </div>
+            {description && (
+              <div className="prose prose-base md:prose-lg">
+                <p className="text-muted-foreground leading-relaxed">
+                  {description}
+                </p>
+              </div>
+            )}
             
             <div className="space-y-4">
-              <div className="p-5 bg-muted rounded-2xl space-y-3">
-                <h3 className="text-lg">Детали</h3>
-                <ul className="space-y-2 text-muted-foreground text-sm sm:text-base">
-                  <li>✓ Сделано вручную с любовью</li>
-                  <li>✓ Оригинальный дизайн</li>
-                  <li>✓ Качественные материалы</li>
-                  <li>✓ Водостойкий и прочный</li>
-                </ul>
-              </div>
+              {detailsItems.length > 0 && (
+                <div className="p-5 bg-muted rounded-2xl space-y-3">
+                  <h3 className="text-lg">{detailsTitle}</h3>
+                  <ul className="space-y-2 text-muted-foreground text-sm sm:text-base">
+                    {detailsItems.map((item, index) => (
+                      <li key={`${product.id}-detail-${index}`}>✓ {item}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
               
               <div className="flex flex-col gap-3">
                 {product.inStock ? (

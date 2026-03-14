@@ -65,5 +65,11 @@ collections:
                 name: "images"
                 widget: "list"
                 field: {label: "Картинка", name: "image", widget: "image"}
-              - {label: "Описание", name: "description", widget: "markdown"}
+              - {label: "Описание", name: "description", widget: "markdown", required: false}
+              - {label: "Заголовок блока деталей", name: "detailsTitle", widget: "string", required: false}
+              - label: "Пункты деталей (с галочками)"
+                name: "detailsItems"
+                widget: "list"
+                required: false
+                field: {label: "Пункт", name: "detailItem", widget: "string"}
               - {label: "В наличии", name: "inStock", widget: "boolean", default: true}

@@ -39,8 +39,7 @@
       ],
       "images": [
         "/images/uploads/sampo.jpg"
-      ],
-      "description": "керпке"
+      ]
     },
     {
       "inStock": true,
@@ -53,8 +52,7 @@
       "category": "keychain",
       "fandoms": [
         "Made in Abyss"
-      ],
-      "description": "Наначи увушка"
+      ]
     },
     {
       "inStock": true,
@@ -67,8 +65,7 @@
       ],
       "images": [
         "/images/uploads/lis.jpg"
-      ],
-      "description": "Лисик пиписик"
+      ]
     },
     {
       "inStock": true,
@@ -81,8 +78,7 @@
       ],
       "images": [
         "/images/uploads/sail.jpg"
-      ],
-      "description": "Лента пук"
+      ]
     },
     {
       "inStock": true,
@@ -96,8 +92,7 @@
       "images": [
         "/images/uploads/img_2187.png",
         "/images/uploads/img_2188.png"
-      ],
-      "description": "ааа"
+      ]
     },
     {
       "inStock": true,
@@ -113,8 +108,7 @@
       "images": [
         "/images/uploads/img_2195.png",
         "/images/uploads/img_2196.png"
-      ],
-      "description": "ааа"
+      ]
     },
     {
       "inStock": true,
@@ -129,8 +123,7 @@
       "images": [
         "/images/uploads/img_2190.png",
         "/images/uploads/img_2189.png"
-      ],
-      "description": "ааа"
+      ]
     },
     {
       "inStock": true,
@@ -144,8 +137,7 @@
       "images": [
         "/images/uploads/img_2194.png",
         "/images/uploads/img_2193.png"
-      ],
-      "description": "ааа"
+      ]
     },
     {
       "inStock": true,
@@ -160,8 +152,7 @@
       "fandoms": [
         "Original",
         "Fantasy"
-      ],
-      "description": "аа"
+      ]
     },
     {
       "inStock": true,
@@ -177,8 +168,7 @@
       "images": [
         "/images/uploads/img_2192.png",
         "/images/uploads/img_2191.png"
-      ],
-      "description": "аа"
+      ]
     }
   ]
 }
