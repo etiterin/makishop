@@ -7,14 +7,14 @@ import { Button } from '../components/ui/button';
 import { toast } from 'sonner';
 import { useLayoutEffect } from 'react';
 import { ProductImageGallery } from '../components/ProductImageGallery';
-import type { Product } from '../types/product';
+import type { Product, ProductCategory } from '../types/product';
 
 const products: Product[] = productsData.products;
 
-const categoryLabels: { [key: string]: string } = {
+const categoryLabels: { [key in ProductCategory]: string } = {
   sticker: 'Стикеры', keychain: 'Брелоки', set: 'Сеты',
   print: 'Принты', textile: 'Текстиль', ribbon: 'Ленты',
-  badge: 'Значки', swap: 'Свопки'
+  badge: 'Значки', swap: 'Свопки', other: 'Другое'
 };
 
 export function ProductDetail() {

@@ -14,7 +14,7 @@ const products = productsData.products;
 const categoryLabels: { [key in ProductCategory]: string } = {
   sticker: 'Стикеры', keychain: 'Брелоки', set: 'Сеты',
   print: 'Принты', textile: 'Текстиль', ribbon: 'Ленты',
-  badge: 'Значки', swap: 'Свопки'
+  badge: 'Значки', swap: 'Свопки', other: 'Другое'
 };
 
 const fandomLabels: { [key in ProductFandom]: string } = {

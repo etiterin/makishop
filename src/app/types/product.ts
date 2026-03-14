@@ -6,7 +6,8 @@ export type ProductCategory =
   | 'textile'
   | 'ribbon'
   | 'badge'
-  | 'swap';
+  | 'swap'
+  | 'other';
 
 export type ProductFandom =
   | 'Original'

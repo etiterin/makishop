@@ -38,6 +38,7 @@ collections:
                   - {label: "Ленты", value: "ribbon"}
                   - {label: "Значки", value: "badge"}
                   - {label: "Свопки", value: "swap"}
+                  - {label: "Другое", value: "other"}
               - label: "Фандомы"
                 name: "fandoms"
                 widget: "list"
