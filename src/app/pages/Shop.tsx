@@ -82,13 +82,6 @@ export function Shop() {
   return (
     <div className="min-h-screen pt-24 pb-20 px-6">
       <div className="max-w-7xl mx-auto">
-        <div className="mb-12 text-center">
-          <h1 className="text-5xl mb-4">Коллекция</h1>
-          <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-            Каждая вещь сделана вручную, с любовью и вниманием к деталям
-          </p>
-        </div>
-        
         <div className="mb-16 bg-card rounded-3xl border border-border/60 shadow-sm p-4 sm:p-6">
           <button
             type="button"
