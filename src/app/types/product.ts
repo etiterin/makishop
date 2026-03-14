@@ -31,6 +31,8 @@ export interface Product {
   category: ProductCategory;
   fandoms?: ProductFandom[];
   images: string[];
-  description: string;
+  description?: string;
+  detailsTitle?: string;
+  detailsItems?: string[];
   inStock: boolean;
 }
