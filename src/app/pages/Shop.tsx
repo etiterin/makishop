@@ -6,26 +6,9 @@ import productsData from '../data/products.json';
 import { ShoppingCart, Plus, Minus, Trash2, ChevronDown, SlidersHorizontal } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { toast } from 'sonner';
+import type { Product, ProductCategory, ProductFandom } from '../types/product';
 
 const products = productsData.products;
-
-// Define types in one place for consistency
-type ProductCategory = 'sticker' | 'keychain' | 'set' | 'print' | 'textile' | 'ribbon' | 'badge' | 'swap';
-type ProductFandom = 
-  | 'Original' | 'Palworld' | 'Honkai Star Rail' | 'Monologue Apothecary' 
-  | 'Made in Abyss' | 'Animals' | 'Creepy' | 'Fantasy' | 'Nature' 
-  | 'Evangelion' | 'Pokemon' | 'Genshin Impact' | 'Other';
-
-export interface Product {
-  id: number;
-  name: string;
-  price: number;
-  category: ProductCategory;
-  fandoms?: ProductFandom[]; // Changed to array
-  images: string[];
-  description: string;
-  inStock: boolean;
-}
 
 // Map values to Russian labels
 const categoryLabels: { [key in ProductCategory]: string } = {

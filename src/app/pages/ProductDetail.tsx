@@ -7,7 +7,7 @@ import { Button } from '../components/ui/button';
 import { toast } from 'sonner';
 import { useLayoutEffect } from 'react';
 import { ProductImageGallery } from '../components/ProductImageGallery';
-import { Product } from './Shop'; // Import Product type for consistency
+import type { Product } from '../types/product';
 
 const products: Product[] = productsData.products;
 
