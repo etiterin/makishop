@@ -17,13 +17,6 @@ const categoryLabels: { [key in ProductCategory]: string } = {
   badge: 'Значки', swap: 'Свопки', other: 'Другое'
 };
 
-const defaultDetailsItems = [
-  'Сделано вручную с любовью',
-  'Оригинальный дизайн',
-  'Качественные материалы',
-  'Водостойкий и прочный',
-];
-
 export function ProductDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -57,10 +50,8 @@ export function ProductDetail() {
   };
 
   const description = product.description?.trim();
-  const hasCustomDetails =
-    typeof product.detailsTitle !== 'undefined' || typeof product.detailsItems !== 'undefined';
   const detailsTitle = product.detailsTitle?.trim() || 'Детали';
-  const detailsItems = (hasCustomDetails ? (product.detailsItems ?? []) : defaultDetailsItems)
+  const detailsItems = (product.detailsItems ?? [])
     .map((item) => item.trim())
     .filter(Boolean);
   
