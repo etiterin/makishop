@@ -31,7 +31,7 @@ export function About() {
           transition={{ duration: 0.6 }}
           className="text-center space-y-4"
         >
-          <h1 className="text-5xl">Makinari Shop</h1>
+          <h1 className="text-5xl">Лавка Макинари</h1>
           <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
             Добро пожаловать в караван с сокровищами и авторским мерчем
           </p>

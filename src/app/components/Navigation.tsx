@@ -28,7 +28,7 @@ export function Navigation() {
               <div className="w-10 h-10 bg-accent/20 rounded-full flex items-center justify-center">
                 <span className="text-xl">✨</span>
               </div>
-              <span className="text-lg sm:text-xl text-foreground tracking-wide font-medium">Makinari Shop</span>
+              <span className="text-lg sm:text-xl text-foreground tracking-wide font-medium">Лавка Макинари</span>
             </motion.div>
           </Link>
           
@@ -72,7 +72,7 @@ export function Navigation() {
                             <div className="w-10 h-10 bg-accent/20 rounded-full flex items-center justify-center">
                               <span className="text-xl">✨</span>
                             </div>
-                            <span className="text-xl text-foreground tracking-wide font-medium">Makinari Shop</span>
+                            <span className="text-xl text-foreground tracking-wide font-medium">Лавка Макинари</span>
                           </div>
                        </Link>
                     </div>
