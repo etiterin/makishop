@@ -5,12 +5,21 @@ const ERROR_IMG_SRC =
 
 export function ImageWithFallback(props: React.ImgHTMLAttributes<HTMLImageElement>) {
   const [didError, setDidError] = useState(false)
+  const {
+    src,
+    alt,
+    style,
+    className,
+    loading = 'lazy',
+    decoding = 'async',
+    onError,
+    ...rest
+  } = props
 
-  const handleError = () => {
+  const handleError: React.ReactEventHandler<HTMLImageElement> = (event) => {
     setDidError(true)
+    onError?.(event)
   }
-
-  const { src, alt, style, className, ...rest } = props
 
   return didError ? (
     <div
@@ -18,17 +27,26 @@ export function ImageWithFallback(props: React.ImgHTMLAttributes<HTMLImageElemen
       style={style}
     >
       <div className="flex items-center justify-center w-full h-full">
-        <img src={ERROR_IMG_SRC} alt="Error loading image" {...rest} data-original-url={src} />
+        <img
+          src={ERROR_IMG_SRC}
+          alt="Error loading image"
+          loading={loading}
+          decoding={decoding}
+          {...rest}
+          data-original-url={src ?? ''}
+        />
       </div>
     </div>
   ) : (
-    <img 
-      src={src} 
-      alt={alt} 
-      className={`bg-muted/30 ${className}`} // Оставил только фон, убрал анимацию opacity
-      style={style} 
-      {...rest} 
-      onError={handleError} 
+    <img
+      src={src}
+      alt={alt}
+      className={`bg-muted/30 ${className ?? ''}`}
+      style={style}
+      loading={loading}
+      decoding={decoding}
+      {...rest}
+      onError={handleError}
     />
   )
 }

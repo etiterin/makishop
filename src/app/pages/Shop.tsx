@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, type ImgHTMLAttributes } from 'react';
 import { motion } from 'motion/react';
 import { useNavigate } from 'react-router-dom';
 import { ImageWithFallback } from '../components/figma/ImageWithFallback';
@@ -153,8 +153,13 @@ export function Shop() {
         
         {filteredProducts.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
-              {filteredProducts.map((product) => (
-                <ProductCard key={product.id} product={product} />
+              {filteredProducts.map((product, index) => (
+                <ProductCard
+                  key={product.id}
+                  product={product}
+                  loading={index < 8 ? 'eager' : 'lazy'}
+                  fetchPriority={index < 3 ? 'high' : 'auto'}
+                />
               ))}
             </div>
         ) : (
@@ -170,7 +175,15 @@ export function Shop() {
   );
 }
 
-function ProductCard({ product }: { product: Product }) {
+function ProductCard({
+  product,
+  loading,
+  fetchPriority,
+}: {
+  product: Product;
+  loading: ImgHTMLAttributes<HTMLImageElement>['loading'];
+  fetchPriority: ImgHTMLAttributes<HTMLImageElement>['fetchPriority'];
+}) {
   const navigate = useNavigate();
   const { cartItems, addToCart, decreaseQuantity, removeFromCart } = useCart();
   const itemInCart = cartItems.find((item) => item.id === product.id);
@@ -201,7 +214,14 @@ function ProductCard({ product }: { product: Product }) {
       className="bg-card rounded-3xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 group flex flex-col cursor-pointer"
     >
       <div className="relative aspect-square bg-gradient-to-br from-muted to-accent/10 overflow-hidden">
-        <ImageWithFallback src={currentImage} alt={product.name} className={`w-full h-full object-cover transition-transform duration-500 ${product.inStock ? 'group-hover:scale-110' : 'grayscale'}`} />
+        <ImageWithFallback
+          src={currentImage}
+          alt={product.name}
+          loading={loading}
+          fetchPriority={fetchPriority}
+          sizes="(min-width: 1280px) 24vw, (min-width: 1024px) 31vw, (min-width: 768px) 46vw, 96vw"
+          className={`w-full h-full object-cover transition-transform duration-500 ${product.inStock ? 'group-hover:scale-110' : 'grayscale'}`}
+        />
 
         {hasMultipleImages && (
           <>

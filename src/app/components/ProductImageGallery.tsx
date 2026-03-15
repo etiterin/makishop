@@ -57,6 +57,9 @@ export function ProductImageGallery({ images, productName, inStock }: ProductIma
         <ImageWithFallback
           src={selectedImage}
           alt={productName}
+          loading="eager"
+          fetchPriority="high"
+          sizes="(min-width: 1024px) 48vw, 96vw"
           className={`w-full h-full object-cover transition-[transform,opacity] duration-200 ease-out ${!inStock ? 'grayscale' : ''}`}
           style={{
             transformOrigin: `${zoomPosition.x}% ${zoomPosition.y}%`,
@@ -101,6 +104,8 @@ export function ProductImageGallery({ images, productName, inStock }: ProductIma
               <ImageWithFallback
                 src={image}
                 alt={`${productName} thumbnail ${i + 1}`}
+                loading="lazy"
+                sizes="(min-width: 1024px) 12vw, 28vw"
                 className="w-full h-full object-cover"
               />
             </div>

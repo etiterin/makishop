@@ -9,7 +9,7 @@
         "Pokemon"
       ],
       "images": [
-        "/images/uploads/vap1.jpg"
+        "/images/uploads/vap1.webp"
       ],
       "description": "Окунись в сияющий водоворот магии с этим набором голографических наклеек, посвящённых Вапореону! Качественная плёнка с радужным переливом. Формат А6, плоттерная резка.",
       "inStock": true
@@ -18,7 +18,7 @@
       "inStock": true,
       "id": 2,
       "images": [
-        "/images/uploads/gacha.jpg"
+        "/images/uploads/gacha.webp"
       ],
       "category": "keychain",
       "name": "Гача-брелок \"Восточные Символы\"",
@@ -38,13 +38,13 @@
         "Honkai Star Rail"
       ],
       "images": [
-        "/images/uploads/sampo.jpg"
+        "/images/uploads/sampo.webp"
       ]
     },
     {
       "inStock": true,
       "images": [
-        "/images/uploads/nan.jpg"
+        "/images/uploads/nan.webp"
       ],
       "id": 4,
       "name": "Брелок на сияющем акриле Наначи",
@@ -64,7 +64,7 @@
         "Creepy"
       ],
       "images": [
-        "/images/uploads/lis.jpg"
+        "/images/uploads/lis.webp"
       ]
     },
     {
@@ -77,7 +77,7 @@
         "Fantasy"
       ],
       "images": [
-        "/images/uploads/sail.jpg"
+        "/images/uploads/sail.webp"
       ]
     },
     {
@@ -90,8 +90,8 @@
         "Animals"
       ],
       "images": [
-        "/images/uploads/img_2187.png",
-        "/images/uploads/img_2188.png"
+        "/images/uploads/img_2187.webp",
+        "/images/uploads/img_2188.webp"
       ]
     },
     {
@@ -106,8 +106,8 @@
         "Nature"
       ],
       "images": [
-        "/images/uploads/img_2195.png",
-        "/images/uploads/img_2196.png"
+        "/images/uploads/img_2195.webp",
+        "/images/uploads/img_2196.webp"
       ]
     },
     {
@@ -121,8 +121,8 @@
         "Animals"
       ],
       "images": [
-        "/images/uploads/img_2190.png",
-        "/images/uploads/img_2189.png"
+        "/images/uploads/img_2190.webp",
+        "/images/uploads/img_2189.webp"
       ]
     },
     {
@@ -135,16 +135,16 @@
         "Monologue Apothecary"
       ],
       "images": [
-        "/images/uploads/img_2194.png",
-        "/images/uploads/img_2193.png"
+        "/images/uploads/img_2194.webp",
+        "/images/uploads/img_2193.webp"
       ]
     },
     {
       "inStock": true,
       "id": 11,
       "images": [
-        "/images/uploads/img_2201.png",
-        "/images/uploads/img_2202.png"
+        "/images/uploads/img_2201.webp",
+        "/images/uploads/img_2202.webp"
       ],
       "name": "Стикеры Снежные Эльфы",
       "price": 150,
@@ -166,8 +166,8 @@
         "Fantasy"
       ],
       "images": [
-        "/images/uploads/img_2192.png",
-        "/images/uploads/img_2191.png"
+        "/images/uploads/img_2192.webp",
+        "/images/uploads/img_2191.webp"
       ]
     }
   ]
