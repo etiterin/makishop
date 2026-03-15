@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
@@ -12,6 +12,14 @@ type CreateCheckoutResponse = {
   paymentUrl: string;
   orderId: string;
   statusToken: string;
+};
+
+type CheckoutDraft = {
+  email: string;
+  name: string;
+  contact: string;
+  comment: string;
+  deliveryMode: DeliveryMode;
 };
 
 type DeliveryMode = 'manual_confirmation' | 'russian_post' | 'cdek';
@@ -45,14 +53,42 @@ function isValidEmail(value: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
 }
 
+const CHECKOUT_DRAFT_STORAGE_KEY = 'checkoutDraft';
+
+function getCheckoutDraft(): CheckoutDraft | null {
+  try {
+    const raw = localStorage.getItem(CHECKOUT_DRAFT_STORAGE_KEY);
+    if (!raw) return null;
+
+    const parsed = JSON.parse(raw) as Partial<CheckoutDraft>;
+    const deliveryMode: DeliveryMode =
+      parsed.deliveryMode === 'russian_post' || parsed.deliveryMode === 'cdek'
+        ? parsed.deliveryMode
+        : 'manual_confirmation';
+
+    return {
+      email: String(parsed.email ?? ''),
+      name: String(parsed.name ?? ''),
+      contact: String(parsed.contact ?? ''),
+      comment: String(parsed.comment ?? ''),
+      deliveryMode,
+    };
+  } catch {
+    return null;
+  }
+}
+
 export function Checkout() {
   const navigate = useNavigate();
   const { cartItems, addToCart, decreaseQuantity, removeFromCart } = useCart();
-  const [email, setEmail] = useState('');
-  const [name, setName] = useState('');
-  const [contact, setContact] = useState('');
-  const [comment, setComment] = useState('');
-  const [deliveryMode, setDeliveryMode] = useState<DeliveryMode>('manual_confirmation');
+  const draft = useMemo(() => getCheckoutDraft(), []);
+  const [email, setEmail] = useState(() => draft?.email ?? '');
+  const [name, setName] = useState(() => draft?.name ?? '');
+  const [contact, setContact] = useState(() => draft?.contact ?? '');
+  const [comment, setComment] = useState(() => draft?.comment ?? '');
+  const [deliveryMode, setDeliveryMode] = useState<DeliveryMode>(
+    () => draft?.deliveryMode ?? 'manual_confirmation',
+  );
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const total = useMemo(
@@ -64,6 +100,23 @@ export function Checkout() {
     () => cartItems.reduce((acc, item) => acc + item.quantity, 0),
     [cartItems],
   );
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(
+        CHECKOUT_DRAFT_STORAGE_KEY,
+        JSON.stringify({
+          email,
+          name,
+          contact,
+          comment,
+          deliveryMode,
+        } satisfies CheckoutDraft),
+      );
+    } catch {
+      // Ignore storage errors (private mode / quota), checkout should still work.
+    }
+  }, [comment, contact, deliveryMode, email, name]);
 
   const handleOnlinePayment = async () => {
     if (cartItems.length === 0 || isSubmitting) return;

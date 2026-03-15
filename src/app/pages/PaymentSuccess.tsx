@@ -28,6 +28,7 @@ type ViewState = "loading" | "pending" | "paid" | "missing" | "error";
 
 const POLL_INTERVAL_MS = 3000;
 const MAX_POLL_ATTEMPTS = 12;
+const CHECKOUT_DRAFT_STORAGE_KEY = "checkoutDraft";
 
 function getLastCheckout(): CheckoutRef | null {
   try {
@@ -98,6 +99,7 @@ export function PaymentSuccess() {
           setViewState("paid");
           clearCart();
           localStorage.removeItem("lastCheckout");
+          localStorage.removeItem(CHECKOUT_DRAFT_STORAGE_KEY);
           if (intervalRef.current) {
             window.clearInterval(intervalRef.current);
           }
