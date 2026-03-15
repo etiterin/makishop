@@ -12,8 +12,15 @@ type CheckoutRef = {
 
 type CheckoutStatus = {
   id: string;
+  invId: number;
   status: "pending_payment" | "paid" | string;
   amountRub: string;
+  items: Array<{
+    name: string;
+    quantity: number;
+    price: number;
+    lineTotal: number;
+  }>;
   paidAt: string | null;
 };
 
@@ -73,8 +80,15 @@ export function PaymentSuccess() {
 
         const nextData: CheckoutStatus = {
           id: String(data.id ?? checkoutRef.id),
+          invId: Number(data.invId ?? 0),
           status: String(data.status ?? "pending_payment"),
           amountRub: String(data.amountRub ?? "0.00"),
+          items: Array.isArray(data.items) ? data.items.map((item) => ({
+            name: String(item?.name ?? ""),
+            quantity: Number(item?.quantity ?? 0),
+            price: Number(item?.price ?? 0),
+            lineTotal: Number(item?.lineTotal ?? 0),
+          })).filter((item) => item.name && item.quantity > 0) : [],
           paidAt: (data.paidAt ?? null) as string | null,
         };
 
@@ -126,11 +140,7 @@ export function PaymentSuccess() {
               <p className="text-muted-foreground">
                 Платеж принят, ожидаем подтверждение от платежного сервиса.
               </p>
-              {statusData && (
-                <p className="text-sm text-muted-foreground">
-                  Сумма заказа: {statusData.amountRub} ₽
-                </p>
-              )}
+              {statusData && <OrderSummary statusData={statusData} />}
             </div>
           )}
 
@@ -143,11 +153,7 @@ export function PaymentSuccess() {
               <p className="text-muted-foreground">
                 Спасибо за заказ! Я скоро свяжусь с тобой для подтверждения деталей доставки.
               </p>
-              {statusData && (
-                <p className="text-sm text-muted-foreground">
-                  Сумма заказа: {statusData.amountRub} ₽
-                </p>
-              )}
+              {statusData && <OrderSummary statusData={statusData} />}
             </div>
           )}
 
@@ -182,6 +188,34 @@ export function PaymentSuccess() {
           </div>
         </div>
       </div>
+    </div>
+  );
+}
+
+function OrderSummary({ statusData }: { statusData: CheckoutStatus }) {
+  return (
+    <div className="space-y-3 rounded-2xl border border-border/60 p-4">
+      <p className="text-sm">
+        Номер заказа: <span className="font-medium">#{statusData.invId || statusData.id.slice(0, 8)}</span>
+      </p>
+      <div className="space-y-2">
+        <p className="text-sm font-medium">Состав заказа:</p>
+        {statusData.items.length > 0 ? (
+          <ul className="space-y-1 text-sm text-muted-foreground">
+            {statusData.items.map((item, index) => (
+              <li key={`${item.name}-${index}`} className="flex items-start justify-between gap-4">
+                <span>{item.name} × {item.quantity}</span>
+                <span>{item.lineTotal.toFixed(0)} ₽</span>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="text-sm text-muted-foreground">Состав уточняется.</p>
+        )}
+      </div>
+      <p className="text-sm text-muted-foreground">
+        Сумма заказа: <span className="font-medium text-foreground">{statusData.amountRub} ₽</span>
+      </p>
     </div>
   );
 }

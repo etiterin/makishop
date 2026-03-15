@@ -7,3 +7,7 @@ ROBO_PASS2_LIVE=your_live_password_2
 ALLOWED_ORIGIN=http://localhost:5173
 ROBO_SUCCESS_URL=http://localhost:5173/payment/success
 ROBO_FAIL_URL=http://localhost:5173/payment/fail
+RESEND_API_KEY=re_xxxxxxxxxxxxxxxxxxxx
+RESEND_FROM=orders@mail.makinari.art
+RESEND_REPLY_TO=orders@makinari.art
+ORDERS_NOTIFICATION_EMAIL=orders@makinari.art

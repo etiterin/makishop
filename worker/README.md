@@ -48,6 +48,10 @@ npx wrangler secret put ROBO_MODE
 - `ALLOWED_ORIGIN` = `https://makinari.art`
 - `ROBO_SUCCESS_URL` = `https://makinari.art/payment/success`
 - `ROBO_FAIL_URL` = `https://makinari.art/payment/fail`
+- `RESEND_API_KEY` = API-ключ Resend (`re_...`)
+- `RESEND_FROM` = адрес отправителя, например `orders@mail.makinari.art`
+- `RESEND_REPLY_TO` = адрес для ответов, например `orders@makinari.art`
+- `ORDERS_NOTIFICATION_EMAIL` = копия письма о заказе вам на почту
 
 Для локальной разработки можно использовать `.dev.vars`.
 

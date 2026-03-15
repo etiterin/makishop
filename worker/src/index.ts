@@ -18,6 +18,10 @@ type Env = {
   ROBO_PASS2_LIVE?: string;
   ROBO_SUCCESS_URL?: string;
   ROBO_FAIL_URL?: string;
+  RESEND_API_KEY?: string;
+  RESEND_FROM?: string;
+  RESEND_REPLY_TO?: string;
+  ORDERS_NOTIFICATION_EMAIL?: string;
 };
 
 type CreateCheckoutItem = {
@@ -60,6 +64,29 @@ type DbOrder = {
   payment_mode: string | null;
 };
 
+type OrderEmailData = {
+  id: string;
+  inv_id: number;
+  amount_rub: string;
+  items_json: string;
+  customer_json: string | null;
+  email_sent_at: string | null;
+};
+
+type OrderCustomer = {
+  email?: string;
+  name?: string;
+  contact?: string;
+  comment?: string;
+  deliveryMode?: string;
+};
+
+type OrderLineItem = {
+  name: string;
+  quantity: number;
+  price: number;
+};
+
 const catalog = new Map<number, CatalogProduct>(
   (productsData.products as CatalogProduct[]).map((product) => [product.id, product]),
 );
@@ -88,6 +115,50 @@ function formatAmountFromKopecks(kopecks: number): string {
 
 function isValidEmail(value: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+}
+
+function parseJsonObject<T>(raw: string | null): T | null {
+  if (!raw) return null;
+  try {
+    const parsed = JSON.parse(raw) as T;
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
+function parseCustomer(raw: string | null): OrderCustomer | null {
+  const parsed = parseJsonObject<Partial<OrderCustomer>>(raw);
+  if (!parsed || typeof parsed !== "object") return null;
+
+  return {
+    email: typeof parsed.email === "string" ? parsed.email : undefined,
+    name: typeof parsed.name === "string" ? parsed.name : undefined,
+    contact: typeof parsed.contact === "string" ? parsed.contact : undefined,
+    comment: typeof parsed.comment === "string" ? parsed.comment : undefined,
+    deliveryMode: typeof parsed.deliveryMode === "string" ? parsed.deliveryMode : undefined,
+  };
+}
+
+function parseOrderItems(raw: string): OrderLineItem[] {
+  const parsed = parseJsonObject<Array<Partial<OrderLineItem>>>(raw);
+  if (!Array.isArray(parsed)) return [];
+
+  return parsed
+    .map((item) => ({
+      name: typeof item.name === "string" ? item.name : "",
+      quantity: Number(item.quantity ?? 0),
+      price: Number(item.price ?? 0),
+    }))
+    .filter((item) => item.name && Number.isFinite(item.quantity) && item.quantity > 0 && Number.isFinite(item.price) && item.price >= 0);
+}
+
+function formatDeliveryMode(mode: string | undefined): string {
+  if (!mode) return "Уточняется";
+  if (mode === "manual_confirmation") return "Уточнение после оплаты";
+  if (mode === "russian_post") return "Почта России";
+  if (mode === "cdek") return "СДЭК";
+  return mode;
 }
 
 function parseStoredMode(value: string | null | undefined): RoboMode | null {
@@ -236,6 +307,124 @@ async function markOrderPaid(env: Env, orderId: string, paymentMode: RoboMode): 
       .bind(now, now, orderId)
       .run();
   }
+}
+
+async function loadOrderEmailData(env: Env, invId: number): Promise<OrderEmailData | null> {
+  try {
+    return await env.DB.prepare(
+      "SELECT id, inv_id, amount_rub, items_json, customer_json, email_sent_at FROM orders WHERE inv_id = ? LIMIT 1",
+    )
+      .bind(invId)
+      .first<OrderEmailData>();
+  } catch (error) {
+    if (!isMissingColumnError(error, "email_sent_at")) {
+      throw error;
+    }
+
+    const legacyOrder = await env.DB.prepare(
+      "SELECT id, inv_id, amount_rub, items_json, customer_json FROM orders WHERE inv_id = ? LIMIT 1",
+    )
+      .bind(invId)
+      .first<{
+        id: string;
+        inv_id: number;
+        amount_rub: string;
+        items_json: string;
+        customer_json: string | null;
+      }>();
+
+    if (!legacyOrder) {
+      return null;
+    }
+
+    return {
+      ...legacyOrder,
+      email_sent_at: null,
+    };
+  }
+}
+
+async function markOrderEmailSent(env: Env, orderId: string): Promise<void> {
+  const now = nowIso();
+  try {
+    await env.DB.prepare(
+      "UPDATE orders SET email_sent_at = ?, updated_at = ? WHERE id = ?",
+    )
+      .bind(now, now, orderId)
+      .run();
+  } catch (error) {
+    if (isMissingColumnError(error, "email_sent_at")) {
+      return;
+    }
+    throw error;
+  }
+}
+
+async function sendOrderPaidEmail(env: Env, order: OrderEmailData): Promise<boolean> {
+  const apiKey = env.RESEND_API_KEY?.trim();
+  const from = env.RESEND_FROM?.trim();
+  if (!apiKey || !from) {
+    return false;
+  }
+
+  const customer = parseCustomer(order.customer_json);
+  const customerEmail = customer?.email?.trim().toLowerCase() ?? "";
+  if (!isValidEmail(customerEmail)) {
+    return false;
+  }
+
+  const items = parseOrderItems(order.items_json);
+  const itemsLines = items.length > 0
+    ? items.map((item) => `- ${item.name} x${item.quantity} = ${(item.price * item.quantity).toFixed(0)} ₽`).join("\n")
+    : "- Состав заказа уточняется";
+
+  const textParts = [
+    `Оплата заказа #${order.inv_id} подтверждена.`,
+    "",
+    "Состав заказа:",
+    itemsLines,
+    "",
+    `Итого: ${order.amount_rub} ₽`,
+    `Доставка: ${formatDeliveryMode(customer?.deliveryMode)}`,
+  ];
+
+  if (customer?.name) {
+    textParts.push(`Имя: ${customer.name}`);
+  }
+  if (customer?.contact) {
+    textParts.push(`Контакт: ${customer.contact}`);
+  }
+  if (customer?.comment) {
+    textParts.push(`Комментарий: ${customer.comment}`);
+  }
+
+  textParts.push("", "Спасибо за заказ!");
+
+  const bcc = env.ORDERS_NOTIFICATION_EMAIL?.trim();
+  const payload = {
+    from,
+    to: [customerEmail],
+    bcc: bcc ? [bcc] : undefined,
+    reply_to: env.RESEND_REPLY_TO?.trim() || undefined,
+    subject: `Заказ #${order.inv_id}: оплата получена`,
+    text: textParts.join("\n"),
+  };
+
+  const response = await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    console.error("Resend send failed", response.status, await response.text());
+    return false;
+  }
+
+  return true;
 }
 
 function buildCorsHeaders(request: Request, env: Env): Headers {
@@ -477,7 +666,7 @@ async function readRobokassaParams(request: Request): Promise<URLSearchParams> {
   return new URL(request.url).searchParams;
 }
 
-async function handleResult(request: Request, env: Env): Promise<Response> {
+async function handleResult(request: Request, env: Env, executionContext: ExecutionContext): Promise<Response> {
   const params = await readRobokassaParams(request);
   const outSum = params.get("OutSum");
   const invIdRaw = params.get("InvId");
@@ -521,6 +710,22 @@ async function handleResult(request: Request, env: Env): Promise<Response> {
     await markOrderPaid(env, order.id, matchedConfig.mode);
   }
 
+  executionContext.waitUntil((async () => {
+    try {
+      const orderEmailData = await loadOrderEmailData(env, invId);
+      if (!orderEmailData || orderEmailData.email_sent_at) {
+        return;
+      }
+
+      const sent = await sendOrderPaidEmail(env, orderEmailData);
+      if (sent) {
+        await markOrderEmailSent(env, orderEmailData.id);
+      }
+    } catch (error) {
+      console.error("Failed to send order email", error);
+    }
+  })());
+
   return textResponse(request, env, `OK${invIdRaw}`);
 }
 
@@ -534,7 +739,7 @@ async function handleStatus(request: Request, env: Env): Promise<Response> {
   }
 
   const order = await env.DB.prepare(
-    "SELECT id, inv_id, status, amount_rub, created_at, paid_at FROM orders WHERE id = ? AND status_token = ? LIMIT 1",
+    "SELECT id, inv_id, status, amount_rub, items_json, created_at, paid_at FROM orders WHERE id = ? AND status_token = ? LIMIT 1",
   )
     .bind(orderId, token)
     .first<{
@@ -542,6 +747,7 @@ async function handleStatus(request: Request, env: Env): Promise<Response> {
       inv_id: number;
       status: string;
       amount_rub: string;
+      items_json: string;
       created_at: string;
       paid_at: string | null;
     }>();
@@ -550,18 +756,26 @@ async function handleStatus(request: Request, env: Env): Promise<Response> {
     return jsonResponse(request, env, { error: "Заказ не найден" }, 404);
   }
 
+  const items = parseOrderItems(order.items_json).map((item) => ({
+    name: item.name,
+    quantity: item.quantity,
+    price: item.price,
+    lineTotal: Number((item.price * item.quantity).toFixed(2)),
+  }));
+
   return jsonResponse(request, env, {
     id: order.id,
     invId: order.inv_id,
     status: order.status,
     amountRub: order.amount_rub,
+    items,
     createdAt: order.created_at,
     paidAt: order.paid_at,
   });
 }
 
 export default {
-  async fetch(request: Request, env: Env): Promise<Response> {
+  async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
     const url = new URL(request.url);
 
     if (request.method === "OPTIONS") {
@@ -577,7 +791,7 @@ export default {
     }
 
     if (url.pathname === "/api/checkout/result" && (request.method === "POST" || request.method === "GET")) {
-      return handleResult(request, env);
+      return handleResult(request, env, ctx);
     }
 
     if (url.pathname === "/api/checkout/status" && request.method === "GET") {
