@@ -161,6 +161,146 @@ function formatDeliveryMode(mode: string | undefined): string {
   return mode;
 }
 
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+function formatRub(value: number | string): string {
+  const amount = typeof value === "string" ? Number(value) : value;
+  if (!Number.isFinite(amount)) return "0 ₽";
+  return `${amount.toFixed(0)} ₽`;
+}
+
+function buildOrderEmailHtml(args: {
+  invId: number;
+  amountRub: string;
+  items: OrderLineItem[];
+  customer: OrderCustomer | null;
+}): string {
+  const { invId, amountRub, items, customer } = args;
+  const deliveryText = formatDeliveryMode(customer?.deliveryMode);
+  const rows = items.length > 0
+    ? items
+      .map((item) => {
+        const lineTotal = item.price * item.quantity;
+        return `
+          <tr>
+            <td style="padding: 10px 0; border-bottom: 1px solid #ece8de; color: #3d3d3d; font-size: 14px;">
+              ${escapeHtml(item.name)}
+            </td>
+            <td style="padding: 10px 0; border-bottom: 1px solid #ece8de; color: #6b665f; font-size: 14px; text-align: center;">
+              ${item.quantity}
+            </td>
+            <td style="padding: 10px 0; border-bottom: 1px solid #ece8de; color: #3d3d3d; font-size: 14px; text-align: right;">
+              ${formatRub(lineTotal)}
+            </td>
+          </tr>
+        `;
+      })
+      .join("")
+    : `
+      <tr>
+        <td colspan="3" style="padding: 14px 0; color: #6b665f; font-size: 14px;">
+          Состав заказа уточняется.
+        </td>
+      </tr>
+    `;
+
+  const customerBlocks: string[] = [];
+  if (customer?.name) {
+    customerBlocks.push(`<p style="margin: 0 0 4px; color: #3d3d3d; font-size: 14px;">Имя: ${escapeHtml(customer.name)}</p>`);
+  }
+  if (customer?.contact) {
+    customerBlocks.push(`<p style="margin: 0 0 4px; color: #3d3d3d; font-size: 14px;">Контакт: ${escapeHtml(customer.contact)}</p>`);
+  }
+  if (customer?.comment) {
+    customerBlocks.push(`<p style="margin: 0; color: #3d3d3d; font-size: 14px;">Комментарий: ${escapeHtml(customer.comment)}</p>`);
+  }
+
+  const customerDetails = customerBlocks.length > 0
+    ? `
+      <div style="margin-top: 18px; padding: 14px; background: #f8f7f3; border-radius: 10px;">
+        <p style="margin: 0 0 8px; color: #4a453f; font-size: 13px; font-weight: 600;">Данные заказа</p>
+        ${customerBlocks.join("")}
+      </div>
+    `
+    : "";
+
+  return `
+    <div style="margin: 0; padding: 0; background: #f4f1eb;">
+      <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background: #f4f1eb; padding: 24px 8px;">
+        <tr>
+          <td align="center">
+            <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="max-width: 620px; background: #ffffff; border-radius: 14px; overflow: hidden; border: 1px solid #e9e4da;">
+              <tr>
+                <td style="padding: 24px 26px 16px; background: linear-gradient(180deg, #faf8f3 0%, #ffffff 100%);">
+                  <p style="margin: 0 0 8px; color: #9a927f; font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase;">
+                    Лавка Макинари
+                  </p>
+                  <h1 style="margin: 0; color: #2f2c28; font-size: 24px; line-height: 1.3; font-weight: 700;">
+                    Оплата получена
+                  </h1>
+                  <p style="margin: 8px 0 0; color: #6b665f; font-size: 14px;">
+                    Спасибо за заказ! Ниже его подтверждение.
+                  </p>
+                </td>
+              </tr>
+              <tr>
+                <td style="padding: 0 26px 8px;">
+                  <div style="padding: 14px; border: 1px solid #ece8de; border-radius: 10px;">
+                    <p style="margin: 0 0 6px; color: #4a453f; font-size: 14px;">
+                      Номер заказа: <strong>#${invId}</strong>
+                    </p>
+                    <p style="margin: 0; color: #4a453f; font-size: 14px;">
+                      Доставка: <strong>${escapeHtml(deliveryText)}</strong>
+                    </p>
+                  </div>
+                </td>
+              </tr>
+              <tr>
+                <td style="padding: 8px 26px 0;">
+                  <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="border-collapse: collapse;">
+                    <thead>
+                      <tr>
+                        <th align="left" style="padding: 10px 0; border-bottom: 1px solid #ece8de; color: #7f7768; font-size: 12px; text-transform: uppercase; letter-spacing: 0.04em; font-weight: 600;">Товар</th>
+                        <th align="center" style="padding: 10px 0; border-bottom: 1px solid #ece8de; color: #7f7768; font-size: 12px; text-transform: uppercase; letter-spacing: 0.04em; font-weight: 600;">Кол-во</th>
+                        <th align="right" style="padding: 10px 0; border-bottom: 1px solid #ece8de; color: #7f7768; font-size: 12px; text-transform: uppercase; letter-spacing: 0.04em; font-weight: 600;">Сумма</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      ${rows}
+                    </tbody>
+                  </table>
+                </td>
+              </tr>
+              <tr>
+                <td style="padding: 14px 26px 0;">
+                  <p style="margin: 0; color: #2f2c28; font-size: 16px; font-weight: 700;">
+                    Итого: ${escapeHtml(formatRub(amountRub))}
+                  </p>
+                  ${customerDetails}
+                </td>
+              </tr>
+              <tr>
+                <td style="padding: 22px 26px 26px;">
+                  <p style="margin: 0; color: #6b665f; font-size: 13px; line-height: 1.55;">
+                    Если нужно изменить данные доставки, просто ответьте на это письмо.
+                  </p>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+      </table>
+    </div>
+  `;
+}
+
 function parseStoredMode(value: string | null | undefined): RoboMode | null {
   if (!value) return null;
   const normalized = value.trim().toLowerCase();
@@ -364,6 +504,10 @@ async function sendOrderPaidEmail(env: Env, order: OrderEmailData): Promise<bool
   const apiKey = env.RESEND_API_KEY?.trim();
   const from = env.RESEND_FROM?.trim();
   if (!apiKey || !from) {
+    console.error("Resend config missing", {
+      hasApiKey: Boolean(apiKey),
+      hasFrom: Boolean(from),
+    });
     return false;
   }
 
@@ -400,6 +544,13 @@ async function sendOrderPaidEmail(env: Env, order: OrderEmailData): Promise<bool
 
   textParts.push("", "Спасибо за заказ!");
 
+  const html = buildOrderEmailHtml({
+    invId: order.inv_id,
+    amountRub: order.amount_rub,
+    items,
+    customer,
+  });
+
   const bcc = env.ORDERS_NOTIFICATION_EMAIL?.trim();
   const payload = {
     from,
@@ -408,6 +559,7 @@ async function sendOrderPaidEmail(env: Env, order: OrderEmailData): Promise<bool
     reply_to: env.RESEND_REPLY_TO?.trim() || undefined,
     subject: `Заказ #${order.inv_id}: оплата получена`,
     text: textParts.join("\n"),
+    html,
   };
 
   const response = await fetch("https://api.resend.com/emails", {
@@ -783,7 +935,11 @@ export default {
     }
 
     if (url.pathname === "/api/health" && request.method === "GET") {
-      return jsonResponse(request, env, { ok: true, paymentMode: getActiveRoboMode(env) });
+      return jsonResponse(request, env, {
+        ok: true,
+        paymentMode: getActiveRoboMode(env),
+        emailEnabled: Boolean(env.RESEND_API_KEY?.trim() && env.RESEND_FROM?.trim()),
+      });
     }
 
     if (url.pathname === "/api/checkout/create" && request.method === "POST") {
