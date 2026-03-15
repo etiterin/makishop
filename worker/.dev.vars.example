@@ -1,9 +1,9 @@
 ROBO_MODE=test
-ROBO_MERCHANT_LOGIN=makinariart
-ROBO_PASS1_TEST=zkNaN5FKO643Yo9lrGvu
-ROBO_PASS2_TEST=tiI15ThRkX35eG4PsfGo
-ROBO_PASS1_LIVE=Wf14B57BIEwlUxHgIpq1
-ROBO_PASS2_LIVE=fm9tnbXvOYCVt9cl364m
+ROBO_MERCHANT_LOGIN=your_merchant_login
+ROBO_PASS1_TEST=your_test_password_1
+ROBO_PASS2_TEST=your_test_password_2
+ROBO_PASS1_LIVE=your_live_password_1
+ROBO_PASS2_LIVE=your_live_password_2
 ALLOWED_ORIGIN=http://localhost:5173
 ROBO_SUCCESS_URL=http://localhost:5173/payment/success
 ROBO_FAIL_URL=http://localhost:5173/payment/fail
