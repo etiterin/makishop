@@ -8,6 +8,10 @@
     "dev": "vite",
     "test": "vitest run",
     "test:watch": "vitest",
+    "worker:dev": "wrangler dev",
+    "worker:deploy": "wrangler deploy",
+    "worker:d1:migrate": "wrangler d1 migrations apply makishop_orders",
+    "worker:d1:migrate:local": "wrangler d1 migrations apply makishop_orders --local",
     "predeploy": "npm run build",
     "deploy": "gh-pages -d dist"
   },
@@ -16,6 +20,7 @@
     "@emotion/styled": "11.14.1",
     "@mui/icons-material": "7.3.5",
     "@mui/material": "7.3.5",
+    "@noble/hashes": "^2.0.1",
     "@popperjs/core": "2.11.8",
     "@radix-ui/react-accordion": "1.2.3",
     "@radix-ui/react-alert-dialog": "1.1.6",
@@ -68,6 +73,7 @@
     "vaul": "1.1.2"
   },
   "devDependencies": {
+    "@cloudflare/workers-types": "^4.20260313.1",
     "@tailwindcss/vite": "4.1.12",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
@@ -76,7 +82,8 @@
     "jsdom": "^28.1.0",
     "tailwindcss": "4.1.12",
     "vite": "6.3.5",
-    "vitest": "^4.1.0"
+    "vitest": "^4.1.0",
+    "wrangler": "^4.73.0"
   },
   "peerDependencies": {
     "react": "18.3.1",

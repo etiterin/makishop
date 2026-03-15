@@ -1,0 +1,9 @@
+name = "makishop-api"
+main = "worker/src/index.ts"
+compatibility_date = "2026-03-15"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "makishop_orders"
+database_id = "179d4815-7eb9-4914-b886-f3af869d4088"
+migrations_dir = "worker/migrations"
