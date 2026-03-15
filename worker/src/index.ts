@@ -28,8 +28,11 @@ type CreateCheckoutItem = {
 type CreateCheckoutPayload = {
   items: CreateCheckoutItem[];
   customer?: {
+    email?: string;
     name?: string;
     contact?: string;
+    comment?: string;
+    deliveryMode?: string;
   };
 };
 
@@ -81,6 +84,10 @@ function parseAmountToKopecks(amount: string): number {
 
 function formatAmountFromKopecks(kopecks: number): string {
   return (kopecks / 100).toFixed(2);
+}
+
+function isValidEmail(value: string): boolean {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
 }
 
 function parseStoredMode(value: string | null | undefined): RoboMode | null {
@@ -292,6 +299,19 @@ async function handleCreateCheckout(request: Request, env: Env): Promise<Respons
     return badRequest(request, env, "Корзина пуста");
   }
 
+  const normalizedEmail = payload.customer?.email?.trim().toLowerCase() ?? "";
+  if (!normalizedEmail || !isValidEmail(normalizedEmail)) {
+    return badRequest(request, env, "Укажите корректный email для отправки чека");
+  }
+
+  const normalizedCustomer = {
+    email: normalizedEmail,
+    name: payload.customer?.name?.trim() || undefined,
+    contact: payload.customer?.contact?.trim() || undefined,
+    comment: payload.customer?.comment?.trim() || undefined,
+    deliveryMode: payload.customer?.deliveryMode?.trim() || undefined,
+  };
+
   const paymentMode = getActiveRoboMode(env);
   const roboConfig = resolveRoboConfig(env, paymentMode);
   if (!roboConfig) {
@@ -362,7 +382,7 @@ async function handleCreateCheckout(request: Request, env: Env): Promise<Respons
             totalKopecks,
             amountRub,
             JSON.stringify(lineItems),
-            payload.customer ? JSON.stringify(payload.customer) : null,
+            JSON.stringify(normalizedCustomer),
             statusToken,
             createdAt,
             createdAt,
@@ -379,7 +399,7 @@ async function handleCreateCheckout(request: Request, env: Env): Promise<Respons
             totalKopecks,
             amountRub,
             JSON.stringify(lineItems),
-            payload.customer ? JSON.stringify(payload.customer) : null,
+            JSON.stringify(normalizedCustomer),
             statusToken,
             createdAt,
             createdAt,
@@ -421,6 +441,7 @@ async function handleCreateCheckout(request: Request, env: Env): Promise<Respons
   if (roboConfig.isTest) {
     paymentParams.set("IsTest", "1");
   }
+  paymentParams.set("Email", normalizedEmail);
   if (env.ROBO_SUCCESS_URL) {
     paymentParams.set("SuccessURL", env.ROBO_SUCCESS_URL);
   }

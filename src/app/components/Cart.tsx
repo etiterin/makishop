@@ -1,21 +1,13 @@
-import { useState } from 'react';
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetFooter, SheetTrigger } from './ui/sheet';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetFooter, SheetTrigger, SheetClose } from './ui/sheet';
 import { Button } from './ui/button';
 import { useCart } from '../context/CartContext';
 import { ShoppingCart, Trash2, Plus, Minus, Check } from 'lucide-react';
 import { ScrollArea } from './ui/scroll-area';
 import { toast } from 'sonner';
-import { getApiBaseUrl } from '../lib/api';
-
-type CreateCheckoutResponse = {
-  paymentUrl: string;
-  orderId: string;
-  statusToken: string;
-};
+import { Link } from 'react-router-dom';
 
 export const Cart = () => {
   const { cartItems, addToCart, decreaseQuantity, removeFromCart, clearCart } = useCart();
-  const [isPayingOnline, setIsPayingOnline] = useState(false);
 
   const total = cartItems.reduce((acc, item) => {
     // Price is now a number, so we can use it directly
@@ -41,50 +33,6 @@ export const Cart = () => {
             duration: 5000,
         });
     });
-  };
-
-  const handleOnlineCheckout = async () => {
-    if (cartItems.length === 0 || isPayingOnline) return;
-
-    setIsPayingOnline(true);
-    const apiBase = getApiBaseUrl();
-
-    try {
-      const response = await fetch(`${apiBase}/api/checkout/create`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          items: cartItems.map((item) => ({
-            id: item.id,
-            quantity: item.quantity,
-          })),
-        }),
-      });
-
-      const data = await response.json() as Partial<CreateCheckoutResponse> & { error?: string };
-
-      if (!response.ok || !data.paymentUrl || !data.orderId || !data.statusToken) {
-        throw new Error(data.error || 'Не удалось создать заказ для онлайн-оплаты');
-      }
-
-      localStorage.setItem(
-        'lastCheckout',
-        JSON.stringify({
-          id: data.orderId,
-          token: data.statusToken,
-        }),
-      );
-
-      window.location.href = data.paymentUrl;
-    } catch (error) {
-      const message = error instanceof Error ? error.message : 'Ошибка при создании заказа';
-      toast.error('Онлайн-оплата недоступна', {
-        description: message,
-      });
-      setIsPayingOnline(false);
-    }
   };
 
   return (
@@ -162,9 +110,11 @@ export const Cart = () => {
                         <span>Итого</span>
                         <span>{total} ₽</span>
                     </div>
-                    <Button className="w-full" onClick={handleOnlineCheckout} disabled={isPayingOnline}>
-                        {isPayingOnline ? 'Переходим к оплате...' : 'Оплатить онлайн'}
-                    </Button>
+                    <SheetClose asChild>
+                      <Button className="w-full" asChild>
+                          <Link to="/checkout">Оформить заказ</Link>
+                      </Button>
+                    </SheetClose>
                     <Button variant="outline" className="w-full" onClick={handleCheckout}>
                         Скопировать заказ
                     </Button>
