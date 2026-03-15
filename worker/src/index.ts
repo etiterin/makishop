@@ -190,13 +190,13 @@ function buildOrderEmailHtml(args: {
         const lineTotal = item.price * item.quantity;
         return `
           <tr>
-            <td style="padding: 10px 0; border-bottom: 1px solid #ece8de; color: #3d3d3d; font-size: 14px;">
+            <td class="line item-name" style="padding: 10px 0; border-bottom: 1px solid #e6e9ef; color: #1f2937; font-size: 14px;">
               ${escapeHtml(item.name)}
             </td>
-            <td style="padding: 10px 0; border-bottom: 1px solid #ece8de; color: #6b665f; font-size: 14px; text-align: center;">
+            <td class="line item-muted" style="padding: 10px 0; border-bottom: 1px solid #e6e9ef; color: #4b5563; font-size: 14px; text-align: center;">
               ${item.quantity}
             </td>
-            <td style="padding: 10px 0; border-bottom: 1px solid #ece8de; color: #3d3d3d; font-size: 14px; text-align: right;">
+            <td class="line item-name" style="padding: 10px 0; border-bottom: 1px solid #e6e9ef; color: #1f2937; font-size: 14px; text-align: right;">
               ${formatRub(lineTotal)}
             </td>
           </tr>
@@ -205,7 +205,7 @@ function buildOrderEmailHtml(args: {
       .join("")
     : `
       <tr>
-        <td colspan="3" style="padding: 14px 0; color: #6b665f; font-size: 14px;">
+        <td colspan="3" class="item-muted" style="padding: 14px 0; color: #4b5563; font-size: 14px;">
           Состав заказа уточняется.
         </td>
       </tr>
@@ -213,50 +213,122 @@ function buildOrderEmailHtml(args: {
 
   const customerBlocks: string[] = [];
   if (customer?.name) {
-    customerBlocks.push(`<p style="margin: 0 0 4px; color: #3d3d3d; font-size: 14px;">Имя: ${escapeHtml(customer.name)}</p>`);
+    customerBlocks.push(`<p class="item-name" style="margin: 0 0 4px; color: #1f2937; font-size: 14px;">Имя: ${escapeHtml(customer.name)}</p>`);
   }
   if (customer?.contact) {
-    customerBlocks.push(`<p style="margin: 0 0 4px; color: #3d3d3d; font-size: 14px;">Контакт: ${escapeHtml(customer.contact)}</p>`);
+    customerBlocks.push(`<p class="item-name" style="margin: 0 0 4px; color: #1f2937; font-size: 14px;">Контакт: ${escapeHtml(customer.contact)}</p>`);
   }
   if (customer?.comment) {
-    customerBlocks.push(`<p style="margin: 0; color: #3d3d3d; font-size: 14px;">Комментарий: ${escapeHtml(customer.comment)}</p>`);
+    customerBlocks.push(`<p class="item-name" style="margin: 0; color: #1f2937; font-size: 14px;">Комментарий: ${escapeHtml(customer.comment)}</p>`);
   }
 
   const customerDetails = customerBlocks.length > 0
     ? `
-      <div style="margin-top: 18px; padding: 14px; background: #f8f7f3; border-radius: 10px;">
-        <p style="margin: 0 0 8px; color: #4a453f; font-size: 13px; font-weight: 600;">Данные заказа</p>
+      <div class="chip" style="margin-top: 18px; padding: 14px; background: #f3f4f6; border: 1px solid #e5e7eb; border-radius: 10px;">
+        <p class="item-muted" style="margin: 0 0 8px; color: #4b5563; font-size: 13px; font-weight: 600;">Данные заказа</p>
         ${customerBlocks.join("")}
       </div>
     `
     : "";
 
   return `
-    <div style="margin: 0; padding: 0; background: #f4f1eb;">
-      <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background: #f4f1eb; padding: 24px 8px;">
+    <!doctype html>
+    <html lang="ru">
+      <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width,initial-scale=1" />
+        <meta name="color-scheme" content="light dark" />
+        <meta name="supported-color-schemes" content="light dark" />
+        <style>
+          body, .email-bg {
+            background: #f4f6f9 !important;
+          }
+          .card {
+            background: #ffffff !important;
+            border: 1px solid #e5e7eb !important;
+          }
+          .header {
+            background: #f9fafb !important;
+            border-bottom: 1px solid #eef1f5 !important;
+          }
+          .brand {
+            color: #6b7280 !important;
+          }
+          .title {
+            color: #111827 !important;
+          }
+          .item-name {
+            color: #1f2937 !important;
+          }
+          .item-muted {
+            color: #4b5563 !important;
+          }
+          .line {
+            border-color: #e6e9ef !important;
+          }
+          .chip {
+            background: #f3f4f6 !important;
+            border-color: #e5e7eb !important;
+          }
+          @media (prefers-color-scheme: dark) {
+            body, .email-bg {
+              background: #0f1115 !important;
+            }
+            .card {
+              background: #171b24 !important;
+              border-color: #2b3342 !important;
+            }
+            .header {
+              background: #1c2230 !important;
+              border-bottom-color: #2b3342 !important;
+            }
+            .brand {
+              color: #9aa6ba !important;
+            }
+            .title {
+              color: #f9fafb !important;
+            }
+            .item-name {
+              color: #f3f4f6 !important;
+            }
+            .item-muted {
+              color: #c2cad8 !important;
+            }
+            .line {
+              border-color: #2b3342 !important;
+            }
+            .chip {
+              background: #1f2634 !important;
+              border-color: #31394a !important;
+            }
+          }
+        </style>
+      </head>
+      <body style="margin:0; padding:0;">
+      <table role="presentation" cellpadding="0" cellspacing="0" width="100%" class="email-bg" style="background: #f4f6f9; padding: 24px 8px;">
         <tr>
           <td align="center">
-            <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="max-width: 620px; background: #ffffff; border-radius: 14px; overflow: hidden; border: 1px solid #e9e4da;">
+            <table role="presentation" cellpadding="0" cellspacing="0" width="100%" class="card" style="max-width: 620px; background: #ffffff; border-radius: 14px; overflow: hidden; border: 1px solid #e5e7eb;">
               <tr>
-                <td style="padding: 24px 26px 16px; background: linear-gradient(180deg, #faf8f3 0%, #ffffff 100%);">
-                  <p style="margin: 0 0 8px; color: #9a927f; font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase;">
+                <td class="header" style="padding: 24px 26px 16px; background: #f9fafb; border-bottom: 1px solid #eef1f5;">
+                  <p class="brand" style="margin: 0 0 8px; color: #6b7280; font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase;">
                     Лавка Макинари
                   </p>
-                  <h1 style="margin: 0; color: #2f2c28; font-size: 24px; line-height: 1.3; font-weight: 700;">
+                  <h1 class="title" style="margin: 0; color: #111827; font-size: 24px; line-height: 1.3; font-weight: 700;">
                     Оплата получена
                   </h1>
-                  <p style="margin: 8px 0 0; color: #6b665f; font-size: 14px;">
+                  <p class="item-muted" style="margin: 8px 0 0; color: #4b5563; font-size: 14px;">
                     Спасибо за заказ! Ниже его подтверждение.
                   </p>
                 </td>
               </tr>
               <tr>
                 <td style="padding: 0 26px 8px;">
-                  <div style="padding: 14px; border: 1px solid #ece8de; border-radius: 10px;">
-                    <p style="margin: 0 0 6px; color: #4a453f; font-size: 14px;">
+                  <div class="chip" style="padding: 14px; border: 1px solid #e5e7eb; border-radius: 10px; margin-top: 14px;">
+                    <p class="item-name" style="margin: 0 0 6px; color: #1f2937; font-size: 14px;">
                       Номер заказа: <strong>#${invId}</strong>
                     </p>
-                    <p style="margin: 0; color: #4a453f; font-size: 14px;">
+                    <p class="item-name" style="margin: 0; color: #1f2937; font-size: 14px;">
                       Доставка: <strong>${escapeHtml(deliveryText)}</strong>
                     </p>
                   </div>
@@ -267,9 +339,9 @@ function buildOrderEmailHtml(args: {
                   <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="border-collapse: collapse;">
                     <thead>
                       <tr>
-                        <th align="left" style="padding: 10px 0; border-bottom: 1px solid #ece8de; color: #7f7768; font-size: 12px; text-transform: uppercase; letter-spacing: 0.04em; font-weight: 600;">Товар</th>
-                        <th align="center" style="padding: 10px 0; border-bottom: 1px solid #ece8de; color: #7f7768; font-size: 12px; text-transform: uppercase; letter-spacing: 0.04em; font-weight: 600;">Кол-во</th>
-                        <th align="right" style="padding: 10px 0; border-bottom: 1px solid #ece8de; color: #7f7768; font-size: 12px; text-transform: uppercase; letter-spacing: 0.04em; font-weight: 600;">Сумма</th>
+                        <th align="left" class="line item-muted" style="padding: 10px 0; border-bottom: 1px solid #e6e9ef; color: #4b5563; font-size: 12px; text-transform: uppercase; letter-spacing: 0.04em; font-weight: 600;">Товар</th>
+                        <th align="center" class="line item-muted" style="padding: 10px 0; border-bottom: 1px solid #e6e9ef; color: #4b5563; font-size: 12px; text-transform: uppercase; letter-spacing: 0.04em; font-weight: 600;">Кол-во</th>
+                        <th align="right" class="line item-muted" style="padding: 10px 0; border-bottom: 1px solid #e6e9ef; color: #4b5563; font-size: 12px; text-transform: uppercase; letter-spacing: 0.04em; font-weight: 600;">Сумма</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -280,7 +352,7 @@ function buildOrderEmailHtml(args: {
               </tr>
               <tr>
                 <td style="padding: 14px 26px 0;">
-                  <p style="margin: 0; color: #2f2c28; font-size: 16px; font-weight: 700;">
+                  <p class="title" style="margin: 0; color: #111827; font-size: 16px; font-weight: 700;">
                     Итого: ${escapeHtml(formatRub(amountRub))}
                   </p>
                   ${customerDetails}
@@ -288,7 +360,7 @@ function buildOrderEmailHtml(args: {
               </tr>
               <tr>
                 <td style="padding: 22px 26px 26px;">
-                  <p style="margin: 0; color: #6b665f; font-size: 13px; line-height: 1.55;">
+                  <p class="item-muted" style="margin: 0; color: #4b5563; font-size: 13px; line-height: 1.55;">
                     Если нужно изменить данные доставки, просто ответьте на это письмо.
                   </p>
                 </td>
@@ -297,7 +369,8 @@ function buildOrderEmailHtml(args: {
           </td>
         </tr>
       </table>
-    </div>
+      </body>
+    </html>
   `;
 }
 

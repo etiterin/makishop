@@ -11,8 +11,7 @@ export function Navigation() {
   const [isMobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const navItems = [
-    { path: '/', label: 'Главная' },
-    { path: '/shop', label: 'Магазин' },
+    { path: '/', label: 'Магазин' },
     { path: '/delivery', label: 'Доставка' },
     { path: '/about', label: 'О нас' },
     { path: '/contact', label: 'Контакты' },

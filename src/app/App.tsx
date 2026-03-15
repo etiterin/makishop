@@ -1,6 +1,5 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Navigation } from './components/Navigation';
-import { Home } from './pages/Home';
 import { Shop } from './pages/Shop';
 import { ProductDetail } from './pages/ProductDetail';
 import { About } from './pages/About';
@@ -22,12 +21,20 @@ export default function App() {
       <CartProvider>
         <ScrollToTop />
         <Toaster position="top-center" richColors />
-        <div className="min-h-screen flex flex-col">
+        <div className="relative min-h-screen flex flex-col">
+          <div aria-hidden className="fixed inset-0 -z-10">
+            <img
+              src="/images/background.jpg"
+              alt=""
+              className="w-full h-full object-cover opacity-15"
+            />
+            <div className="absolute inset-0 bg-background/88" />
+          </div>
           <Navigation />
           <main className="flex-1">
             <Routes>
-              <Route path="/" element={<Home />} />
-              <Route path="/shop" element={<Shop />} />
+              <Route path="/" element={<Shop />} />
+              <Route path="/shop" element={<Navigate to="/" replace />} />
               <Route path="/product/:id" element={<ProductDetail />} />
               <Route path="/about" element={<About />} />
               <Route path="/contact" element={<Contact />} />
