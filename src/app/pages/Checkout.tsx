@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
@@ -14,21 +14,38 @@ type CreateCheckoutResponse = {
   statusToken: string;
 };
 
+type DeliveryMode = 'manual_confirmation' | 'russian_post' | 'cdek';
+type DeliveryProvider = Exclude<DeliveryMode, 'manual_confirmation'>;
+
+type DeliveryQuoteOption = {
+  mode: DeliveryProvider;
+  optionCode: string;
+  optionLabel: string;
+  amountRub: number;
+  etaMinDays: number;
+  etaMaxDays: number;
+};
+
+type DeliveryQuotesResponse = {
+  options: DeliveryQuoteOption[];
+  subtotalRub: number;
+};
+
 type CheckoutDraft = {
   email: string;
   name: string;
   contact: string;
   comment: string;
   deliveryMode: DeliveryMode;
+  destinationCity: string;
+  destinationPostalCode: string;
+  selectedDeliveryOptionCode: string;
 };
-
-type DeliveryMode = 'manual_confirmation' | 'russian_post' | 'cdek';
 
 const DELIVERY_OPTIONS: Array<{
   value: DeliveryMode;
   label: string;
   description: string;
-  disabled?: boolean;
 }> = [
   {
     value: 'manual_confirmation',
@@ -37,20 +54,35 @@ const DELIVERY_OPTIONS: Array<{
   },
   {
     value: 'russian_post',
-    label: 'Почта России (скоро)',
-    description: 'Добавим расчет и выбор отделения прямо на этом шаге.',
-    disabled: true,
+    label: 'Почта России',
+    description: 'Расчет стоимости по индексу и выбор тарифа до оплаты.',
   },
   {
     value: 'cdek',
-    label: 'СДЭК (скоро)',
-    description: 'Позже добавим выбор пункта выдачи на карте.',
-    disabled: true,
+    label: 'СДЭК',
+    description: 'Расчет стоимости по индексу и выбор тарифа до оплаты.',
   },
 ];
 
 function isValidEmail(value: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+}
+
+function isValidPostalCode(value: string): boolean {
+  return /^\d{6}$/.test(value.trim());
+}
+
+async function parseJsonResponse<T>(response: Response): Promise<T> {
+  const raw = await response.text();
+  if (!raw) {
+    throw new Error(`Пустой ответ сервера (HTTP ${response.status})`);
+  }
+
+  try {
+    return JSON.parse(raw) as T;
+  } catch {
+    throw new Error(`Сервер вернул некорректный JSON (HTTP ${response.status})`);
+  }
 }
 
 const CHECKOUT_DRAFT_STORAGE_KEY = 'checkoutDraft';
@@ -72,6 +104,9 @@ function getCheckoutDraft(): CheckoutDraft | null {
       contact: String(parsed.contact ?? ''),
       comment: String(parsed.comment ?? ''),
       deliveryMode,
+      destinationCity: String(parsed.destinationCity ?? ''),
+      destinationPostalCode: String(parsed.destinationPostalCode ?? ''),
+      selectedDeliveryOptionCode: String(parsed.selectedDeliveryOptionCode ?? ''),
     };
   } catch {
     return null;
@@ -89,7 +124,22 @@ export function Checkout() {
   const [deliveryMode, setDeliveryMode] = useState<DeliveryMode>(
     () => draft?.deliveryMode ?? 'manual_confirmation',
   );
+  const [destinationCity, setDestinationCity] = useState(() => draft?.destinationCity ?? '');
+  const [destinationPostalCode, setDestinationPostalCode] = useState(() => draft?.destinationPostalCode ?? '');
+  const [deliveryOptions, setDeliveryOptions] = useState<DeliveryQuoteOption[]>([]);
+  const [selectedDeliveryOptionCode, setSelectedDeliveryOptionCode] = useState(
+    () => draft?.selectedDeliveryOptionCode ?? '',
+  );
+  const [deliveryError, setDeliveryError] = useState('');
+  const [isLoadingDelivery, setIsLoadingDelivery] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const hasMountedRef = useRef(false);
+
+  const invalidateDeliveryQuotes = (nextError = '') => {
+    setDeliveryOptions([]);
+    setSelectedDeliveryOptionCode('');
+    setDeliveryError(nextError);
+  };
 
   const total = useMemo(
     () => cartItems.reduce((acc, item) => acc + item.price * item.quantity, 0),
@@ -101,6 +151,13 @@ export function Checkout() {
     [cartItems],
   );
 
+  const selectedDeliveryOption = useMemo(
+    () => deliveryOptions.find((option) => option.optionCode === selectedDeliveryOptionCode) ?? null,
+    [deliveryOptions, selectedDeliveryOptionCode],
+  );
+  const deliveryAmount = selectedDeliveryOption?.amountRub ?? 0;
+  const totalWithDelivery = total + deliveryAmount;
+
   useEffect(() => {
     try {
       localStorage.setItem(
@@ -111,12 +168,84 @@ export function Checkout() {
           contact,
           comment,
           deliveryMode,
+          destinationCity,
+          destinationPostalCode,
+          selectedDeliveryOptionCode,
         } satisfies CheckoutDraft),
       );
     } catch {
       // Ignore storage errors (private mode / quota), checkout should still work.
     }
-  }, [comment, contact, deliveryMode, email, name]);
+  }, [comment, contact, deliveryMode, destinationCity, destinationPostalCode, email, name, selectedDeliveryOptionCode]);
+
+  useEffect(() => {
+    invalidateDeliveryQuotes();
+  }, [deliveryMode]);
+
+  useEffect(() => {
+    if (!hasMountedRef.current) {
+      hasMountedRef.current = true;
+      return;
+    }
+    if (deliveryMode === 'manual_confirmation') return;
+    invalidateDeliveryQuotes('Корзина изменилась, пересчитай доставку.');
+  }, [cartItems]);
+
+  const handleCalculateDelivery = async () => {
+    if (deliveryMode === 'manual_confirmation' || isLoadingDelivery) return;
+
+    const normalizedPostalCode = destinationPostalCode.trim();
+    if (!isValidPostalCode(normalizedPostalCode)) {
+      setDeliveryError('Укажи индекс из 6 цифр, чтобы рассчитать доставку.');
+      return;
+    }
+
+    setIsLoadingDelivery(true);
+    setDeliveryError('');
+
+    const apiBase = getApiBaseUrl();
+
+    try {
+      const response = await fetch(`${apiBase}/api/delivery/quotes`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          items: cartItems.map((item) => ({
+            id: item.id,
+            quantity: item.quantity,
+          })),
+          destination: {
+            city: destinationCity.trim() || undefined,
+            postalCode: normalizedPostalCode,
+          },
+          providers: [deliveryMode],
+        }),
+      });
+
+      const data = await parseJsonResponse<Partial<DeliveryQuotesResponse> & { error?: string }>(response);
+      if (!response.ok || !Array.isArray(data.options)) {
+        throw new Error(data.error || 'Не удалось рассчитать доставку');
+      }
+
+      setDeliveryOptions(data.options);
+      setSelectedDeliveryOptionCode((prev) => {
+        if (prev && data.options.some((option) => option.optionCode === prev)) {
+          return prev;
+        }
+        return data.options[0]?.optionCode ?? '';
+      });
+      if (data.options.length === 0) {
+        setDeliveryError('Нет доступных тарифов для этого индекса.');
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Ошибка расчета доставки';
+      invalidateDeliveryQuotes(message);
+    } finally {
+      setIsLoadingDelivery(false);
+    }
+  };
 
   const handleOnlinePayment = async () => {
     if (cartItems.length === 0 || isSubmitting) return;
@@ -127,6 +256,22 @@ export function Checkout() {
         description: 'На него Robokassa отправит чек и уведомление об оплате.',
       });
       return;
+    }
+
+    if (deliveryMode !== 'manual_confirmation') {
+      const normalizedPostalCode = destinationPostalCode.trim();
+      if (!isValidPostalCode(normalizedPostalCode)) {
+        toast.error('Нужен индекс доставки', {
+          description: 'Для СДЭК и Почты России укажи индекс из 6 цифр.',
+        });
+        return;
+      }
+      if (!selectedDeliveryOption) {
+        toast.error('Выбери тариф доставки', {
+          description: 'Сначала нажми «Рассчитать доставку», затем выбери вариант.',
+        });
+        return;
+      }
     }
 
     setIsSubmitting(true);
@@ -149,11 +294,23 @@ export function Checkout() {
             contact: contact.trim() || undefined,
             comment: comment.trim() || undefined,
             deliveryMode,
+            delivery: deliveryMode === 'manual_confirmation'
+              ? undefined
+              : {
+                mode: deliveryMode,
+                destinationCity: destinationCity.trim() || undefined,
+                destinationPostalCode: destinationPostalCode.trim(),
+                optionCode: selectedDeliveryOption?.optionCode,
+                optionLabel: selectedDeliveryOption?.optionLabel,
+                amountRub: selectedDeliveryOption?.amountRub,
+                etaMinDays: selectedDeliveryOption?.etaMinDays,
+                etaMaxDays: selectedDeliveryOption?.etaMaxDays,
+              },
           },
         }),
       });
 
-      const data = await response.json() as Partial<CreateCheckoutResponse> & { error?: string };
+      const data = await parseJsonResponse<Partial<CreateCheckoutResponse> & { error?: string }>(response);
       if (!response.ok || !data.paymentUrl || !data.orderId || !data.statusToken) {
         throw new Error(data.error || 'Не удалось создать заказ для онлайн-оплаты');
       }
@@ -267,11 +424,8 @@ export function Checkout() {
                         selected
                           ? 'border-primary bg-primary/5'
                           : 'border-border hover:border-primary/40'
-                      } ${option.disabled ? 'opacity-55 cursor-not-allowed hover:border-border' : ''}`}
-                      onClick={() => {
-                        if (option.disabled) return;
-                        setDeliveryMode(option.value);
-                      }}
+                      }`}
+                      onClick={() => setDeliveryMode(option.value)}
                     >
                       <div className="flex items-start gap-3">
                         <span
@@ -288,6 +442,89 @@ export function Checkout() {
                   );
                 })}
               </div>
+
+              {deliveryMode !== 'manual_confirmation' && (
+                <div className="space-y-3 rounded-2xl border border-border/70 p-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div className="space-y-2">
+                      <label htmlFor="checkout-destination-city" className="text-sm font-medium">Город</label>
+                      <Input
+                        id="checkout-destination-city"
+                        value={destinationCity}
+                        onChange={(event) => {
+                          setDestinationCity(event.target.value);
+                          if (deliveryOptions.length > 0 || selectedDeliveryOptionCode) {
+                            invalidateDeliveryQuotes('Параметры доставки изменились, пересчитай стоимость.');
+                          }
+                        }}
+                        placeholder="Москва"
+                        autoComplete="address-level2"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label htmlFor="checkout-destination-postal-code" className="text-sm font-medium">
+                        Индекс <span className="text-destructive">*</span>
+                      </label>
+                      <Input
+                        id="checkout-destination-postal-code"
+                        inputMode="numeric"
+                        maxLength={6}
+                        value={destinationPostalCode}
+                        onChange={(event) => {
+                          setDestinationPostalCode(event.target.value.replace(/[^\d]/g, '').slice(0, 6));
+                          if (deliveryOptions.length > 0 || selectedDeliveryOptionCode) {
+                            invalidateDeliveryQuotes('Параметры доставки изменились, пересчитай стоимость.');
+                          }
+                        }}
+                        placeholder="101000"
+                        autoComplete="postal-code"
+                      />
+                    </div>
+                  </div>
+
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="w-full sm:w-auto"
+                    onClick={handleCalculateDelivery}
+                    disabled={isLoadingDelivery}
+                  >
+                    {isLoadingDelivery ? 'Считаем доставку...' : 'Рассчитать доставку'}
+                  </Button>
+
+                  {deliveryError && (
+                    <p className="text-sm text-destructive">{deliveryError}</p>
+                  )}
+
+                  {deliveryOptions.length > 0 && (
+                    <div className="space-y-2">
+                      {deliveryOptions.map((option) => {
+                        const selected = option.optionCode === selectedDeliveryOptionCode;
+                        return (
+                          <button
+                            key={option.optionCode}
+                            type="button"
+                            className={`w-full text-left rounded-xl border p-3 transition-colors ${
+                              selected ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/40'
+                            }`}
+                            onClick={() => setSelectedDeliveryOptionCode(option.optionCode)}
+                          >
+                            <div className="flex items-start justify-between gap-3">
+                              <div>
+                                <p className="text-sm font-medium">{option.optionLabel}</p>
+                                <p className="text-xs text-muted-foreground">
+                                  Срок: {option.etaMinDays}-{option.etaMaxDays} дн.
+                                </p>
+                              </div>
+                              <p className="text-sm font-semibold whitespace-nowrap">{option.amountRub} ₽</p>
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              )}
 
               <div className="space-y-2">
                 <label htmlFor="checkout-comment" className="text-sm font-medium">Комментарий к заказу</label>
@@ -354,18 +591,44 @@ export function Checkout() {
                 <span>Товаров</span>
                 <span>{totalCount} шт.</span>
               </div>
-              <div className="flex items-center justify-between text-lg font-semibold">
-                <span>Итого</span>
+              <div className="flex items-center justify-between text-sm text-muted-foreground">
+                <span>Товары</span>
                 <span>{total} ₽</span>
               </div>
+              <div className="flex items-center justify-between text-sm text-muted-foreground">
+                <span>Доставка</span>
+                <span>
+                  {deliveryMode === 'manual_confirmation'
+                    ? 'уточним'
+                    : selectedDeliveryOption
+                      ? `${selectedDeliveryOption.amountRub} ₽`
+                      : 'не выбрана'}
+                </span>
+              </div>
+              <div className="flex items-center justify-between text-lg font-semibold">
+                <span>Итого</span>
+                <span>{deliveryMode === 'manual_confirmation' ? `${total} ₽` : `${totalWithDelivery} ₽`}</span>
+              </div>
               <p className="text-xs text-muted-foreground">
-                Стоимость доставки пока подтверждается отдельно.
+                {deliveryMode === 'manual_confirmation'
+                  ? 'Стоимость доставки подтверждается отдельно в переписке.'
+                  : 'Стоимость доставки фиксируется в заказе перед оплатой.'}
               </p>
             </div>
 
-            <Button className="w-full" onClick={handleOnlinePayment} disabled={isSubmitting}>
+            <Button
+              className="w-full"
+              onClick={handleOnlinePayment}
+              disabled={isSubmitting || (deliveryMode !== 'manual_confirmation' && !selectedDeliveryOption)}
+            >
               {isSubmitting ? 'Переходим к оплате...' : 'Оплатить онлайн'}
             </Button>
+
+            {deliveryMode !== 'manual_confirmation' && !selectedDeliveryOption && (
+              <p className="text-xs text-muted-foreground">
+                Выбери тариф доставки, чтобы перейти к оплате.
+              </p>
+            )}
 
             <Button variant="outline" className="w-full" asChild>
               <Link to="/shop">

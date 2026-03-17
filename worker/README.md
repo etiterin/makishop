@@ -1,6 +1,7 @@
 # Cloudflare Backend (Robokassa + D1)
 
 ## Что реализовано
+- `POST /api/delivery/quotes` — расчет вариантов доставки (СДЭК/Почта России) по индексу и корзине.
 - `POST /api/checkout/create` — создает заказ в D1, пересчитывает сумму по каталогу и отдает ссылку на оплату Robokassa.
 - `POST|GET /api/checkout/result` — webhook от Robokassa, проверка подписи и обновление статуса заказа.
 - `GET /api/checkout/status?id=...&token=...` — статус заказа для фронта.
@@ -48,6 +49,8 @@ npx wrangler secret put ROBO_MODE
 - `ALLOWED_ORIGIN` = `https://makinari.art`
 - `ROBO_SUCCESS_URL` = `https://makinari.art/payment/success`
 - `ROBO_FAIL_URL` = `https://makinari.art/payment/fail`
+- `CDEK_ORIGIN_POSTAL_CODE` = индекс отправления для расчетов СДЭК (например, `101000`)
+- `POST_ORIGIN_POSTAL_CODE` = индекс отправления для расчетов Почты России (например, `101000`)
 - `RESEND_API_KEY` = API-ключ Resend (`re_...`)
 - `RESEND_FROM` = адрес отправителя, например `orders@mail.makinari.art`
 - `RESEND_REPLY_TO` = адрес для ответов, например `orders@makinari.art`

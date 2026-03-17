@@ -22,11 +22,27 @@ type Env = {
   RESEND_FROM?: string;
   RESEND_REPLY_TO?: string;
   ORDERS_NOTIFICATION_EMAIL?: string;
+  CDEK_ORIGIN_POSTAL_CODE?: string;
+  POST_ORIGIN_POSTAL_CODE?: string;
 };
 
 type CreateCheckoutItem = {
   id: number;
   quantity: number;
+};
+
+type DeliveryMode = "manual_confirmation" | "russian_post" | "cdek";
+type DeliveryProvider = Exclude<DeliveryMode, "manual_confirmation">;
+
+type DeliverySelectionPayload = {
+  mode?: string;
+  destinationCity?: string;
+  destinationPostalCode?: string;
+  optionCode?: string;
+  optionLabel?: string;
+  amountRub?: number;
+  etaMinDays?: number;
+  etaMaxDays?: number;
 };
 
 type CreateCheckoutPayload = {
@@ -36,8 +52,18 @@ type CreateCheckoutPayload = {
     name?: string;
     contact?: string;
     comment?: string;
-    deliveryMode?: string;
+    deliveryMode?: DeliveryMode | string;
+    delivery?: DeliverySelectionPayload;
   };
+};
+
+type DeliveryQuotePayload = {
+  items: CreateCheckoutItem[];
+  destination?: {
+    city?: string;
+    postalCode?: string;
+  };
+  providers?: Array<DeliveryProvider | string>;
 };
 
 type CatalogProduct = {
@@ -45,6 +71,7 @@ type CatalogProduct = {
   name: string;
   price: number;
   inStock: boolean;
+  category?: string;
 };
 
 type RoboMode = "test" | "live";
@@ -78,7 +105,8 @@ type OrderCustomer = {
   name?: string;
   contact?: string;
   comment?: string;
-  deliveryMode?: string;
+  deliveryMode?: DeliveryMode | string;
+  delivery?: OrderCustomerDelivery;
 };
 
 type OrderLineItem = {
@@ -87,9 +115,199 @@ type OrderLineItem = {
   price: number;
 };
 
+type OrderCustomerDelivery = {
+  mode: DeliveryProvider;
+  destinationCity?: string;
+  destinationPostalCode: string;
+  optionCode: string;
+  optionLabel: string;
+  amountRub: number;
+  etaMinDays: number;
+  etaMaxDays: number;
+};
+
+type DeliveryQuoteOption = {
+  mode: DeliveryProvider;
+  optionCode: string;
+  optionLabel: string;
+  amountRub: number;
+  etaMinDays: number;
+  etaMaxDays: number;
+};
+
+type ShipmentMetrics = {
+  weightGrams: number;
+  lengthCm: number;
+  widthCm: number;
+  heightCm: number;
+  itemCount: number;
+};
+
+type ProductShippingProfile = {
+  weightGrams: number;
+  lengthCm: number;
+  widthCm: number;
+  heightCm: number;
+};
+
 const catalog = new Map<number, CatalogProduct>(
   (productsData.products as CatalogProduct[]).map((product) => [product.id, product]),
 );
+
+const DEFAULT_SHIPPING_PROFILE: ProductShippingProfile = {
+  weightGrams: 180,
+  lengthCm: 24,
+  widthCm: 18,
+  heightCm: 2,
+};
+
+const CATEGORY_SHIPPING_PROFILES: Record<string, ProductShippingProfile> = {
+  sticker: { weightGrams: 60, lengthCm: 20, widthCm: 14, heightCm: 1 },
+  keychain: { weightGrams: 90, lengthCm: 12, widthCm: 10, heightCm: 3 },
+  set: { weightGrams: 260, lengthCm: 26, widthCm: 20, heightCm: 4 },
+  print: { weightGrams: 120, lengthCm: 33, widthCm: 24, heightCm: 2 },
+  textile: { weightGrams: 340, lengthCm: 30, widthCm: 25, heightCm: 6 },
+  ribbon: { weightGrams: 120, lengthCm: 22, widthCm: 18, heightCm: 3 },
+  badge: { weightGrams: 70, lengthCm: 10, widthCm: 10, heightCm: 2 },
+  swap: { weightGrams: 110, lengthCm: 16, widthCm: 14, heightCm: 3 },
+  other: { weightGrams: 200, lengthCm: 24, widthCm: 18, heightCm: 4 },
+};
+
+function normalizeDeliveryMode(value: string | undefined): DeliveryMode {
+  if (value === "cdek" || value === "russian_post" || value === "manual_confirmation") {
+    return value;
+  }
+  return "manual_confirmation";
+}
+
+function isDeliveryProvider(value: string | undefined): value is DeliveryProvider {
+  return value === "cdek" || value === "russian_post";
+}
+
+function sanitizeText(value: string | undefined, maxLength = 120): string | undefined {
+  const normalized = value?.trim();
+  if (!normalized) return undefined;
+  return normalized.slice(0, maxLength);
+}
+
+function isValidRussianPostalCode(value: string | undefined): boolean {
+  if (!value) return false;
+  return /^\d{6}$/.test(value.trim());
+}
+
+function getShippingProfile(product: CatalogProduct): ProductShippingProfile {
+  if (!product.category) {
+    return DEFAULT_SHIPPING_PROFILE;
+  }
+  return CATEGORY_SHIPPING_PROFILES[product.category] ?? DEFAULT_SHIPPING_PROFILE;
+}
+
+function buildShipmentMetrics(mergedItems: Map<number, number>): ShipmentMetrics {
+  let weightGrams = 0;
+  let lengthCm = 0;
+  let widthCm = 0;
+  let heightCm = 0;
+  let itemCount = 0;
+
+  for (const [id, quantity] of mergedItems.entries()) {
+    const product = catalog.get(id);
+    if (!product) continue;
+    const profile = getShippingProfile(product);
+    itemCount += quantity;
+    weightGrams += profile.weightGrams * quantity;
+    lengthCm = Math.max(lengthCm, profile.lengthCm);
+    widthCm = Math.max(widthCm, profile.widthCm);
+    heightCm += profile.heightCm * quantity;
+  }
+
+  return {
+    weightGrams: Math.max(100, weightGrams),
+    lengthCm: Math.max(10, Math.min(60, lengthCm)),
+    widthCm: Math.max(10, Math.min(60, widthCm)),
+    heightCm: Math.max(2, Math.min(60, heightCm)),
+    itemCount,
+  };
+}
+
+function getDistanceTier(originPostalCode: string, destinationPostalCode: string): 0 | 1 | 2 {
+  if (originPostalCode === destinationPostalCode) return 0;
+  if (originPostalCode.slice(0, 2) === destinationPostalCode.slice(0, 2)) return 0;
+  if (originPostalCode.slice(0, 1) === destinationPostalCode.slice(0, 1)) return 1;
+  return 2;
+}
+
+function roundRub(value: number): number {
+  return Math.max(0, Math.round(value));
+}
+
+function buildEstimatedQuotes(args: {
+  env: Env;
+  destinationCity?: string;
+  destinationPostalCode: string;
+  shipment: ShipmentMetrics;
+  providers: DeliveryProvider[];
+}): DeliveryQuoteOption[] {
+  const { env, destinationCity, destinationPostalCode, shipment, providers } = args;
+  const cdekOrigin = env.CDEK_ORIGIN_POSTAL_CODE?.trim() || "101000";
+  const postOrigin = env.POST_ORIGIN_POSTAL_CODE?.trim() || "101000";
+  const uniqueProviders = Array.from(new Set(providers));
+
+  const cdekTier = getDistanceTier(cdekOrigin, destinationPostalCode);
+  const postTier = getDistanceTier(postOrigin, destinationPostalCode);
+  const weightOverBase = Math.max(0, shipment.weightGrams - 250);
+  const weightUnits = Math.ceil(weightOverBase / 100);
+  const volumeFactor = Math.max(0, shipment.lengthCm * shipment.widthCm * shipment.heightCm - 2500) / 500;
+
+  const options: DeliveryQuoteOption[] = [];
+
+  if (uniqueProviders.includes("cdek")) {
+    options.push({
+      mode: "cdek",
+      optionCode: "cdek_pickup_standard",
+      optionLabel: destinationCity
+        ? `СДЭК, пункт выдачи (${destinationCity})`
+        : "СДЭК, пункт выдачи",
+      amountRub: roundRub(240 + cdekTier * 120 + weightUnits * 10 + volumeFactor * 6),
+      etaMinDays: 2 + cdekTier,
+      etaMaxDays: 4 + cdekTier * 2,
+    });
+    options.push({
+      mode: "cdek",
+      optionCode: "cdek_courier_standard",
+      optionLabel: destinationCity
+        ? `СДЭК, курьер (${destinationCity})`
+        : "СДЭК, курьер",
+      amountRub: roundRub(360 + cdekTier * 140 + weightUnits * 12 + volumeFactor * 8),
+      etaMinDays: 1 + cdekTier,
+      etaMaxDays: 3 + cdekTier * 2,
+    });
+  }
+
+  if (uniqueProviders.includes("russian_post")) {
+    options.push({
+      mode: "russian_post",
+      optionCode: "post_office_parcel",
+      optionLabel: destinationCity
+        ? `Почта России, отделение (${destinationCity})`
+        : "Почта России, отделение",
+      amountRub: roundRub(210 + postTier * 105 + weightUnits * 8 + volumeFactor * 5),
+      etaMinDays: 3 + postTier,
+      etaMaxDays: 6 + postTier * 2,
+    });
+    options.push({
+      mode: "russian_post",
+      optionCode: "post_courier_ems",
+      optionLabel: destinationCity
+        ? `Почта России EMS (${destinationCity})`
+        : "Почта России EMS",
+      amountRub: roundRub(390 + postTier * 135 + weightUnits * 11 + volumeFactor * 7),
+      etaMinDays: 2 + postTier,
+      etaMaxDays: 5 + postTier * 2,
+    });
+  }
+
+  return options;
+}
 
 function md5Hex(value: string): string {
   return bytesToHex(md5(new TextEncoder().encode(value)));
@@ -131,12 +349,48 @@ function parseCustomer(raw: string | null): OrderCustomer | null {
   const parsed = parseJsonObject<Partial<OrderCustomer>>(raw);
   if (!parsed || typeof parsed !== "object") return null;
 
+  const rawDelivery = parsed.delivery as Partial<OrderCustomerDelivery> | undefined;
+  let delivery: OrderCustomerDelivery | undefined;
+  if (rawDelivery && typeof rawDelivery === "object") {
+    const mode = rawDelivery.mode;
+    const optionCode = typeof rawDelivery.optionCode === "string" ? rawDelivery.optionCode : "";
+    const optionLabel = typeof rawDelivery.optionLabel === "string" ? rawDelivery.optionLabel : "";
+    const destinationPostalCode = typeof rawDelivery.destinationPostalCode === "string"
+      ? rawDelivery.destinationPostalCode
+      : "";
+    const amountRub = Number(rawDelivery.amountRub ?? NaN);
+    const etaMinDays = Number(rawDelivery.etaMinDays ?? NaN);
+    const etaMaxDays = Number(rawDelivery.etaMaxDays ?? NaN);
+
+    if (isDeliveryProvider(mode) && optionCode && optionLabel && isValidRussianPostalCode(destinationPostalCode)
+      && Number.isFinite(amountRub) && amountRub >= 0
+      && Number.isFinite(etaMinDays) && etaMinDays >= 0
+      && Number.isFinite(etaMaxDays) && etaMaxDays >= etaMinDays) {
+      delivery = {
+        mode,
+        optionCode,
+        optionLabel,
+        destinationPostalCode,
+        destinationCity: sanitizeText(
+          typeof rawDelivery.destinationCity === "string" ? rawDelivery.destinationCity : undefined,
+          80,
+        ),
+        amountRub,
+        etaMinDays,
+        etaMaxDays,
+      };
+    }
+  }
+
   return {
     email: typeof parsed.email === "string" ? parsed.email : undefined,
     name: typeof parsed.name === "string" ? parsed.name : undefined,
     contact: typeof parsed.contact === "string" ? parsed.contact : undefined,
     comment: typeof parsed.comment === "string" ? parsed.comment : undefined,
-    deliveryMode: typeof parsed.deliveryMode === "string" ? parsed.deliveryMode : undefined,
+    deliveryMode: normalizeDeliveryMode(
+      typeof parsed.deliveryMode === "string" ? parsed.deliveryMode : undefined,
+    ),
+    delivery,
   };
 }
 
@@ -161,6 +415,22 @@ function formatDeliveryMode(mode: string | undefined): string {
   return mode;
 }
 
+function formatDeliverySummary(customer: OrderCustomer | null): string {
+  const modeLabel = formatDeliveryMode(customer?.deliveryMode);
+  if (!customer?.delivery) {
+    return modeLabel;
+  }
+
+  const destinationParts = [
+    customer.delivery.destinationCity,
+    customer.delivery.destinationPostalCode,
+  ].filter(Boolean);
+  const destination = destinationParts.join(", ");
+  const eta = `${customer.delivery.etaMinDays}-${customer.delivery.etaMaxDays} дн.`;
+
+  return `${customer.delivery.optionLabel}${destination ? `, ${destination}` : ""} (${formatRub(customer.delivery.amountRub)}, ${eta})`;
+}
+
 function escapeHtml(value: string): string {
   return value
     .replace(/&/g, "&amp;")
@@ -183,7 +453,7 @@ function buildOrderEmailHtml(args: {
   customer: OrderCustomer | null;
 }): string {
   const { invId, amountRub, items, customer } = args;
-  const deliveryText = formatDeliveryMode(customer?.deliveryMode);
+  const deliveryText = formatDeliverySummary(customer);
   const rows = items.length > 0
     ? items
       .map((item) => {
@@ -220,6 +490,9 @@ function buildOrderEmailHtml(args: {
   }
   if (customer?.comment) {
     customerBlocks.push(`<p class="item-name" style="margin: 0; color: #1f2937; font-size: 14px;">Комментарий: ${escapeHtml(customer.comment)}</p>`);
+  }
+  if (customer?.delivery?.destinationPostalCode) {
+    customerBlocks.push(`<p class="item-name" style="margin: 4px 0 0; color: #1f2937; font-size: 14px;">Индекс доставки: ${escapeHtml(customer.delivery.destinationPostalCode)}</p>`);
   }
 
   const customerDetails = customerBlocks.length > 0
@@ -602,7 +875,7 @@ async function sendOrderPaidEmail(env: Env, order: OrderEmailData): Promise<bool
     itemsLines,
     "",
     `Итого: ${order.amount_rub} ₽`,
-    `Доставка: ${formatDeliveryMode(customer?.deliveryMode)}`,
+    `Доставка: ${formatDeliverySummary(customer)}`,
   ];
 
   if (customer?.name) {
@@ -701,6 +974,74 @@ function generateInvId(): number {
   return Number(`${timePart}${randomPart}`);
 }
 
+async function handleDeliveryQuotes(request: Request, env: Env): Promise<Response> {
+  let payload: DeliveryQuotePayload;
+  try {
+    payload = await request.json<DeliveryQuotePayload>();
+  } catch {
+    return badRequest(request, env, "Некорректный JSON");
+  }
+
+  if (!payload?.items || !Array.isArray(payload.items) || payload.items.length === 0) {
+    return badRequest(request, env, "Нужна хотя бы одна позиция в корзине");
+  }
+
+  const destinationPostalCode = payload.destination?.postalCode?.trim();
+  if (!isValidRussianPostalCode(destinationPostalCode)) {
+    return badRequest(request, env, "Укажите индекс доставки (6 цифр)");
+  }
+
+  const destinationCity = sanitizeText(payload.destination?.city, 80);
+
+  const merged = new Map<number, number>();
+  for (const item of payload.items) {
+    if (!Number.isInteger(item.id) || !Number.isInteger(item.quantity) || item.quantity < 1 || item.quantity > 99) {
+      return badRequest(request, env, "Некорректные позиции корзины");
+    }
+    merged.set(item.id, (merged.get(item.id) ?? 0) + item.quantity);
+  }
+
+  let subtotalRub = 0;
+  for (const [id, quantity] of merged.entries()) {
+    const product = catalog.get(id);
+    if (!product) {
+      return badRequest(request, env, `Товар с id=${id} не найден`);
+    }
+    if (!product.inStock) {
+      return jsonResponse(request, env, { error: `Товар "${product.name}" сейчас не в наличии` }, 409);
+    }
+    subtotalRub += product.price * quantity;
+  }
+
+  const providers = Array.isArray(payload.providers) && payload.providers.length > 0
+    ? payload.providers.filter((provider): provider is DeliveryProvider => isDeliveryProvider(provider))
+    : ["cdek", "russian_post"];
+
+  if (providers.length === 0) {
+    return badRequest(request, env, "Нужно выбрать хотя бы одну службу доставки");
+  }
+
+  const shipment = buildShipmentMetrics(merged);
+  const options = buildEstimatedQuotes({
+    env,
+    destinationCity,
+    destinationPostalCode,
+    shipment,
+    providers,
+  }).sort((a, b) => a.amountRub - b.amountRub);
+
+  return jsonResponse(request, env, {
+    destination: {
+      city: destinationCity ?? null,
+      postalCode: destinationPostalCode,
+    },
+    shipment,
+    subtotalRub,
+    options,
+    note: "Расчет на основе интеграционного тарификатора (СДЭК/Почта), финальная стоимость фиксируется в заказе.",
+  });
+}
+
 async function handleCreateCheckout(request: Request, env: Env): Promise<Response> {
   let payload: CreateCheckoutPayload;
   try {
@@ -717,14 +1058,9 @@ async function handleCreateCheckout(request: Request, env: Env): Promise<Respons
   if (!normalizedEmail || !isValidEmail(normalizedEmail)) {
     return badRequest(request, env, "Укажите корректный email для отправки чека");
   }
-
-  const normalizedCustomer = {
-    email: normalizedEmail,
-    name: payload.customer?.name?.trim() || undefined,
-    contact: payload.customer?.contact?.trim() || undefined,
-    comment: payload.customer?.comment?.trim() || undefined,
-    deliveryMode: payload.customer?.deliveryMode?.trim() || undefined,
-  };
+  const requestedDeliveryMode = normalizeDeliveryMode(
+    payload.customer?.delivery?.mode ?? payload.customer?.deliveryMode,
+  );
 
   const paymentMode = getActiveRoboMode(env);
   const roboConfig = resolveRoboConfig(env, paymentMode);
@@ -770,6 +1106,55 @@ async function handleCreateCheckout(request: Request, env: Env): Promise<Respons
   if (totalKopecks <= 0) {
     return badRequest(request, env, "Сумма заказа должна быть больше нуля");
   }
+
+  let selectedDelivery: OrderCustomerDelivery | undefined;
+  if (isDeliveryProvider(requestedDeliveryMode)) {
+    const destinationPostalCode = payload.customer?.delivery?.destinationPostalCode?.trim() ?? "";
+    if (!isValidRussianPostalCode(destinationPostalCode)) {
+      return badRequest(request, env, "Для доставки нужен корректный индекс (6 цифр)");
+    }
+
+    const destinationCity = sanitizeText(payload.customer?.delivery?.destinationCity, 80);
+    const quoteOptionCode = payload.customer?.delivery?.optionCode?.trim();
+    if (!quoteOptionCode) {
+      return badRequest(request, env, "Выберите тариф доставки");
+    }
+
+    const shipment = buildShipmentMetrics(merged);
+    const availableOptions = buildEstimatedQuotes({
+      env,
+      destinationCity,
+      destinationPostalCode,
+      shipment,
+      providers: [requestedDeliveryMode],
+    });
+
+    const selectedOption = availableOptions.find((option) => option.optionCode === quoteOptionCode);
+    if (!selectedOption) {
+      return badRequest(request, env, "Выбранный тариф доставки устарел, пересчитайте доставку");
+    }
+
+    totalKopecks += toKopecks(selectedOption.amountRub);
+    selectedDelivery = {
+      mode: selectedOption.mode,
+      destinationCity,
+      destinationPostalCode,
+      optionCode: selectedOption.optionCode,
+      optionLabel: selectedOption.optionLabel,
+      amountRub: selectedOption.amountRub,
+      etaMinDays: selectedOption.etaMinDays,
+      etaMaxDays: selectedOption.etaMaxDays,
+    };
+  }
+
+  const normalizedCustomer: OrderCustomer = {
+    email: normalizedEmail,
+    name: sanitizeText(payload.customer?.name, 80),
+    contact: sanitizeText(payload.customer?.contact, 80),
+    comment: sanitizeText(payload.customer?.comment, 500),
+    deliveryMode: requestedDeliveryMode,
+    delivery: selectedDelivery,
+  };
 
   const orderId = crypto.randomUUID().replace(/-/g, "");
   const statusToken = generateStatusToken();
@@ -868,6 +1253,7 @@ async function handleCreateCheckout(request: Request, env: Env): Promise<Respons
     invId,
     statusToken,
     amountRub,
+    delivery: selectedDelivery ?? null,
     paymentMode: roboConfig.mode,
     paymentUrl: `https://auth.robokassa.ru/Merchant/Index.aspx?${paymentParams.toString()}`,
   });
@@ -964,7 +1350,7 @@ async function handleStatus(request: Request, env: Env): Promise<Response> {
   }
 
   const order = await env.DB.prepare(
-    "SELECT id, inv_id, status, amount_rub, items_json, created_at, paid_at FROM orders WHERE id = ? AND status_token = ? LIMIT 1",
+    "SELECT id, inv_id, status, amount_rub, items_json, customer_json, created_at, paid_at FROM orders WHERE id = ? AND status_token = ? LIMIT 1",
   )
     .bind(orderId, token)
     .first<{
@@ -973,6 +1359,7 @@ async function handleStatus(request: Request, env: Env): Promise<Response> {
       status: string;
       amount_rub: string;
       items_json: string;
+      customer_json: string | null;
       created_at: string;
       paid_at: string | null;
     }>();
@@ -987,6 +1374,7 @@ async function handleStatus(request: Request, env: Env): Promise<Response> {
     price: item.price,
     lineTotal: Number((item.price * item.quantity).toFixed(2)),
   }));
+  const customer = parseCustomer(order.customer_json);
 
   return jsonResponse(request, env, {
     id: order.id,
@@ -994,6 +1382,17 @@ async function handleStatus(request: Request, env: Env): Promise<Response> {
     status: order.status,
     amountRub: order.amount_rub,
     items,
+    delivery: customer?.delivery
+      ? {
+        mode: customer.delivery.mode,
+        label: customer.delivery.optionLabel,
+        amountRub: customer.delivery.amountRub,
+        destinationCity: customer.delivery.destinationCity ?? null,
+        destinationPostalCode: customer.delivery.destinationPostalCode,
+        etaMinDays: customer.delivery.etaMinDays,
+        etaMaxDays: customer.delivery.etaMaxDays,
+      }
+      : null,
     createdAt: order.created_at,
     paidAt: order.paid_at,
   });
@@ -1012,7 +1411,12 @@ export default {
         ok: true,
         paymentMode: getActiveRoboMode(env),
         emailEnabled: Boolean(env.RESEND_API_KEY?.trim() && env.RESEND_FROM?.trim()),
+        deliveryEnabled: true,
       });
+    }
+
+    if (url.pathname === "/api/delivery/quotes" && request.method === "POST") {
+      return handleDeliveryQuotes(request, env);
     }
 
     if (url.pathname === "/api/checkout/create" && request.method === "POST") {

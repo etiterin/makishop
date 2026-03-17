@@ -11,3 +11,5 @@ RESEND_API_KEY=re_xxxxxxxxxxxxxxxxxxxx
 RESEND_FROM=orders@mail.makinari.art
 RESEND_REPLY_TO=orders@makinari.art
 ORDERS_NOTIFICATION_EMAIL=orders@makinari.art
+CDEK_ORIGIN_POSTAL_CODE=101000
+POST_ORIGIN_POSTAL_CODE=101000

@@ -21,6 +21,15 @@ type CheckoutStatus = {
     price: number;
     lineTotal: number;
   }>;
+  delivery: {
+    mode: "cdek" | "russian_post";
+    label: string;
+    amountRub: number;
+    destinationCity: string | null;
+    destinationPostalCode: string;
+    etaMinDays: number;
+    etaMaxDays: number;
+  } | null;
   paidAt: string | null;
 };
 
@@ -29,6 +38,19 @@ type ViewState = "loading" | "pending" | "paid" | "missing" | "error";
 const POLL_INTERVAL_MS = 3000;
 const MAX_POLL_ATTEMPTS = 12;
 const CHECKOUT_DRAFT_STORAGE_KEY = "checkoutDraft";
+
+async function parseJsonResponse<T>(response: Response): Promise<T> {
+  const raw = await response.text();
+  if (!raw) {
+    throw new Error(`Пустой ответ сервера (HTTP ${response.status})`);
+  }
+
+  try {
+    return JSON.parse(raw) as T;
+  } catch {
+    throw new Error(`Сервер вернул некорректный JSON (HTTP ${response.status})`);
+  }
+}
 
 function getLastCheckout(): CheckoutRef | null {
   try {
@@ -73,7 +95,7 @@ export function PaymentSuccess() {
         const response = await fetch(
           `${apiBase}/api/checkout/status?id=${encodeURIComponent(checkoutRef.id)}&token=${encodeURIComponent(checkoutRef.token)}`,
         );
-        const data = (await response.json()) as Partial<CheckoutStatus> & { error?: string };
+        const data = await parseJsonResponse<Partial<CheckoutStatus> & { error?: string }>(response);
 
         if (!response.ok) {
           throw new Error(data.error || "Не удалось получить статус платежа");
@@ -90,6 +112,17 @@ export function PaymentSuccess() {
             price: Number(item?.price ?? 0),
             lineTotal: Number(item?.lineTotal ?? 0),
           })).filter((item) => item.name && item.quantity > 0) : [],
+          delivery: data.delivery
+            ? {
+              mode: data.delivery.mode === "cdek" ? "cdek" : "russian_post",
+              label: String(data.delivery.label ?? ""),
+              amountRub: Number(data.delivery.amountRub ?? 0),
+              destinationCity: data.delivery.destinationCity ? String(data.delivery.destinationCity) : null,
+              destinationPostalCode: String(data.delivery.destinationPostalCode ?? ""),
+              etaMinDays: Number(data.delivery.etaMinDays ?? 0),
+              etaMaxDays: Number(data.delivery.etaMaxDays ?? 0),
+            }
+            : null,
           paidAt: (data.paidAt ?? null) as string | null,
         };
 
@@ -215,6 +248,18 @@ function OrderSummary({ statusData }: { statusData: CheckoutStatus }) {
           <p className="text-sm text-muted-foreground">Состав уточняется.</p>
         )}
       </div>
+      {statusData.delivery && (
+        <div className="space-y-1 rounded-xl bg-muted/40 p-3">
+          <p className="text-sm font-medium">Доставка</p>
+          <p className="text-sm text-muted-foreground">
+            {statusData.delivery.label} • {statusData.delivery.amountRub} ₽
+          </p>
+          <p className="text-sm text-muted-foreground">
+            {statusData.delivery.destinationCity ? `${statusData.delivery.destinationCity}, ` : ""}
+            {statusData.delivery.destinationPostalCode} • {statusData.delivery.etaMinDays}-{statusData.delivery.etaMaxDays} дн.
+          </p>
+        </div>
+      )}
       <p className="text-sm text-muted-foreground">
         Сумма заказа: <span className="font-medium text-foreground">{statusData.amountRub} ₽</span>
       </p>
