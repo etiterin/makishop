@@ -260,7 +260,7 @@ For more information, see https://radix-ui.com/primitives/docs/components/${n.do
 
 В этой серии — 10 разных брелоков с ивилюциями и напитками рамуне. Каждый дизайн уникален и выполнен с вниманием к деталям.
 
-Если вам понравится конкретный брелок, его можно выкупить отдельно — доступны все варианты, кроме одного редкого на блестящем акриле.`,category:"keychain",detailsItems:["Размер брелочка 3,5 см","На цветной веревочке-карабине","10 вариантов ивилюций","Есть секретная опция"]},{fandoms:["Animals","Pokemon"],price:450,name:"Гача Ивилюции Рамуне [ Выкуп ]",inStock:!0,detailsTitle:"Выкуп Рамуне Гачи. ",images:["/images/uploads/ерфенкр.jpg","/images/uploads/line-evdrnx11.jpg","/images/uploads/line-evdrnx112.jpg","/images/uploads/line-evdrnx1144.jpg","/images/uploads/gzhryhehj.jpg","/images/uploads/gluiolf.jpg"],id:14,description:`Эта страничка товара для выбора выкупа ивика из гачи с Рамуне.
+Если вам понравится конкретный брелок, его можно выкупить отдельно — доступны все варианты, кроме одного редкого на блестящем акриле.`,category:"keychain",detailsItems:["Размер брелочка 3,5 см","На цветной веревочке-карабине","10 вариантов ивилюций","Есть секретная опция"]},{fandoms:["Animals","Pokemon"],price:450,name:"Гача Ивилюции Рамуне [Выкуп]",inStock:!0,detailsTitle:"Выкуп Рамуне Гачи. ",images:["/images/uploads/ерфенкр.jpg","/images/uploads/line-evdrnx11.jpg","/images/uploads/line-evdrnx112.jpg","/images/uploads/line-evdrnx1144.jpg","/images/uploads/gzhryhehj.jpg","/images/uploads/gluiolf.jpg"],id:14,description:`Эта страничка товара для выбора выкупа ивика из гачи с Рамуне.
 
 Добавьте этот товар в корзину и при оформлении напишите в описании номер желаемой опции!
 
