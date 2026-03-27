@@ -278,6 +278,18 @@
         "/images/uploads/basturhgventhrhgvrue.jpg"
       ],
       "description": "Сияющий золотой стикерпак по мотивам Египетской мифологии \n\nКотики и золото сочетаются идеально"
+    },
+    {
+      "inStock": true,
+      "id": 19,
+      "name": "Стикерпак Летняя Япония",
+      "price": 200,
+      "category": "sticker",
+      "images": [
+        "/images/uploads/kitsfhhvjfnrhtj.jpg",
+        "/images/uploads/kitshfhhv.jpg"
+      ],
+      "description": "Стикерпак А6 с сахарной ламинацией"
     }
   ]
 }
