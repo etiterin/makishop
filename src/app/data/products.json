@@ -219,6 +219,20 @@
         "/images/uploads/img_2192.webp",
         "/images/uploads/img_2191.webp"
       ]
+    },
+    {
+      "inStock": true,
+      "id": 15,
+      "name": "Значок Сердечко Фапута",
+      "price": 400,
+      "category": "badge",
+      "fandoms": [
+        "Made in Abyss"
+      ],
+      "images": [
+        "/images/uploads/fapuhdhdbd.jpg"
+      ],
+      "description": "Значок с покрытием Софт-тач"
     }
   ]
 }
