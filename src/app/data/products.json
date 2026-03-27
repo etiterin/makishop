@@ -247,6 +247,21 @@
         "/images/uploads/nanajfjfjfjvjf.jpg"
       ],
       "description": "Значок с покрытием Софт-тач"
+    },
+    {
+      "inStock": true,
+      "id": 17,
+      "name": "Стикерпак А6 Лягушки",
+      "price": 200,
+      "category": "sticker",
+      "fandoms": [
+        "Animals"
+      ],
+      "images": [
+        "/images/uploads/lagydhfhhf.jpg",
+        "/images/uploads/lagushfhvvnughvh.jpg"
+      ],
+      "description": "А6 стикерпак на виниловой пленке"
     }
   ]
 }
