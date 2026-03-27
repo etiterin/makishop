@@ -32,6 +32,9 @@ export function SiteFooter() {
           </a>
         </div>
         <div className="pt-1 flex flex-wrap items-center gap-x-4 gap-y-1">
+          <Link to="/track" className="hover:text-foreground transition-colors underline underline-offset-4">
+            Отследить заказ
+          </Link>
           <Link to="/privacy" className="hover:text-foreground transition-colors underline underline-offset-4">
             Политика конфиденциальности
           </Link>

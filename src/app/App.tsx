@@ -10,6 +10,7 @@ import { PublicOffer } from './pages/PublicOffer';
 import { PaymentSuccess } from './pages/PaymentSuccess';
 import { PaymentFail } from './pages/PaymentFail';
 import { Checkout } from './pages/Checkout';
+import { TrackOrder } from './pages/TrackOrder';
 import { CartProvider } from './context/CartContext';
 import { ScrollToTop } from './components/ScrollToTop';
 import { Toaster } from 'sonner';
@@ -44,6 +45,7 @@ export default function App() {
               <Route path="/offer" element={<PublicOffer />} />
               <Route path="/oferta" element={<Navigate to="/offer" replace />} />
               <Route path="/checkout" element={<Checkout />} />
+              <Route path="/track" element={<TrackOrder />} />
               <Route path="/payment/success" element={<PaymentSuccess />} />
               <Route path="/payment/fail" element={<PaymentFail />} />
               {/* Catch-all route for 404 */}

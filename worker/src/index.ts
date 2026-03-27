@@ -18,6 +18,15 @@ type Env = {
   ROBO_PASS2_LIVE?: string;
   ROBO_SUCCESS_URL?: string;
   ROBO_FAIL_URL?: string;
+  TRACK_BASE_URL?: string;
+  ADMIN_STATUS_API_KEY?: string;
+  TELEGRAM_BOT_TOKEN?: string;
+  BOT_TOKEN?: string;
+  TELEGRAM_ADMIN_CHAT_IDS?: string;
+  ADMIN_CHAT_IDS?: string;
+  TELEGRAM_GROUP_ID?: string;
+  GROUP_ID?: string;
+  TELEGRAM_WEBHOOK_SECRET?: string;
   RESEND_API_KEY?: string;
   RESEND_FROM?: string;
   RESEND_REPLY_TO?: string;
@@ -66,6 +75,53 @@ type DeliveryQuotePayload = {
   providers?: Array<DeliveryProvider | string>;
 };
 
+type AdminUpdateStatusPayload = {
+  orderId?: string;
+  fulfillmentStatus?: string;
+};
+
+type TelegramUpdate = {
+  update_id?: number;
+  message?: {
+    message_id?: number;
+    text?: string;
+    chat?: {
+      id?: number | string;
+      type?: string;
+    };
+    from?: {
+      id?: number;
+      username?: string;
+    };
+  };
+  edited_message?: {
+    message_id?: number;
+    text?: string;
+    chat?: {
+      id?: number | string;
+      type?: string;
+    };
+    from?: {
+      id?: number;
+      username?: string;
+    };
+  };
+};
+
+type OrderRecord = {
+  id: string;
+  inv_id: number;
+  status: string;
+  fulfillment_status: string | null;
+  fulfillment_status_updated_at: string | null;
+  amount_rub: string;
+  items_json: string;
+  customer_json: string | null;
+  status_token: string;
+  created_at: string;
+  paid_at: string | null;
+};
+
 type CatalogProduct = {
   id: number;
   name: string;
@@ -91,12 +147,22 @@ type DbOrder = {
   payment_mode: string | null;
 };
 
+type FulfillmentStatus =
+  | "pending_payment"
+  | "paid"
+  | "processing"
+  | "shipped"
+  | "delivered"
+  | "completed"
+  | "canceled";
+
 type OrderEmailData = {
   id: string;
   inv_id: number;
   amount_rub: string;
   items_json: string;
   customer_json: string | null;
+  status_token: string;
   email_sent_at: string | null;
 };
 
@@ -431,6 +497,208 @@ function formatDeliverySummary(customer: OrderCustomer | null): string {
   return `${customer.delivery.optionLabel}${destination ? `, ${destination}` : ""} (${formatRub(customer.delivery.amountRub)}, ${eta})`;
 }
 
+function normalizeFulfillmentStatus(value: string | null | undefined): FulfillmentStatus {
+  if (isFulfillmentStatus(value)) {
+    return value;
+  }
+  return "pending_payment";
+}
+
+function isFulfillmentStatus(value: string | null | undefined): value is FulfillmentStatus {
+  return value === "pending_payment"
+    || value === "paid"
+    || value === "processing"
+    || value === "shipped"
+    || value === "delivered"
+    || value === "completed"
+    || value === "canceled";
+}
+
+function formatFulfillmentStatus(status: FulfillmentStatus): string {
+  if (status === "pending_payment") return "Ожидает оплату";
+  if (status === "paid") return "Оплачен";
+  if (status === "processing") return "В обработке";
+  if (status === "shipped") return "Передан в доставку";
+  if (status === "delivered") return "Доставлен";
+  if (status === "completed") return "Завершен";
+  if (status === "canceled") return "Отменен";
+  return status;
+}
+
+function getTelegramBotToken(env: Env): string {
+  return env.TELEGRAM_BOT_TOKEN?.trim() || env.BOT_TOKEN?.trim() || "";
+}
+
+function parseTelegramChatIds(raw: string | undefined): string[] {
+  if (!raw) return [];
+  return raw
+    .split(",")
+    .map((value) => value.trim())
+    .filter(Boolean);
+}
+
+function getTelegramAdminChatIds(env: Env): string[] {
+  return parseTelegramChatIds(env.TELEGRAM_ADMIN_CHAT_IDS ?? env.ADMIN_CHAT_IDS);
+}
+
+function getTelegramGroupId(env: Env): string | undefined {
+  const value = env.TELEGRAM_GROUP_ID?.trim() || env.GROUP_ID?.trim();
+  return value || undefined;
+}
+
+function isTelegramConfigured(env: Env): boolean {
+  return Boolean(getTelegramBotToken(env));
+}
+
+function buildTrackingUrl(env: Env, orderId: string, statusToken: string): string {
+  return `${getTrackBaseUrl(env)}/track?id=${encodeURIComponent(orderId)}&token=${encodeURIComponent(statusToken)}`;
+}
+
+function formatTelegramItems(items: OrderLineItem[]): string {
+  if (items.length === 0) return "- Состав уточняется";
+
+  const lines = items.slice(0, 10).map((item) => {
+    const lineTotal = item.price * item.quantity;
+    return `- ${item.name} ×${item.quantity} = ${lineTotal.toFixed(0)} ₽`;
+  });
+
+  if (items.length > 10) {
+    lines.push(`- ... и еще ${items.length - 10} поз.`);
+  }
+
+  return lines.join("\n");
+}
+
+function buildTelegramOrderMessage(args: {
+  title: string;
+  env: Env;
+  orderId: string;
+  invId: number;
+  amountRub: string;
+  paymentStatus: string;
+  fulfillmentStatus: FulfillmentStatus;
+  items: OrderLineItem[];
+  customer: OrderCustomer | null;
+  statusToken: string;
+}): string {
+  const {
+    title,
+    env,
+    orderId,
+    invId,
+    amountRub,
+    paymentStatus,
+    fulfillmentStatus,
+    items,
+    customer,
+    statusToken,
+  } = args;
+
+  const paymentLabel = paymentStatus === "paid" ? "Оплачено" : "Ожидает оплату";
+  const trackingUrl = buildTrackingUrl(env, orderId, statusToken);
+  const customerLines: string[] = [];
+  if (customer?.email) customerLines.push(`Email: ${customer.email}`);
+  if (customer?.name) customerLines.push(`Имя: ${customer.name}`);
+  if (customer?.contact) customerLines.push(`Телеграм/телефон: ${customer.contact}`);
+  if (customer?.comment) customerLines.push(`Комментарий: ${customer.comment}`);
+
+  const lines = [
+    `🧾 ${title}`,
+    `Заказ #${invId}`,
+    `ID: ${orderId}`,
+    `Оплата: ${paymentLabel}`,
+    `Статус: ${formatFulfillmentStatus(fulfillmentStatus)}`,
+    `Сумма: ${amountRub} ₽`,
+    `Доставка: ${formatDeliverySummary(customer)}`,
+    "",
+    "Состав:",
+    formatTelegramItems(items),
+  ];
+
+  lines.push("", "Контакты заказчика:");
+  if (customerLines.length > 0) {
+    lines.push(...customerLines);
+  } else {
+    lines.push("- не указаны");
+  }
+
+  lines.push("", `Трекинг: ${trackingUrl}`);
+
+  return lines.join("\n");
+}
+
+async function sendTelegramMessage(env: Env, chatId: string, text: string): Promise<boolean> {
+  const botToken = getTelegramBotToken(env);
+  if (!botToken) return false;
+
+  const response = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      chat_id: chatId,
+      text: text.slice(0, 4000),
+      disable_web_page_preview: true,
+    }),
+  });
+
+  if (!response.ok) {
+    console.error("Telegram sendMessage failed", response.status, await response.text());
+    return false;
+  }
+
+  return true;
+}
+
+async function notifyTelegramTargets(env: Env, text: string, excludeChatId?: string): Promise<void> {
+  if (!isTelegramConfigured(env)) return;
+
+  const groupId = getTelegramGroupId(env);
+  const targets = new Set<string>();
+
+  // If group is configured, notifications go only there.
+  if (groupId) {
+    targets.add(groupId);
+  } else {
+    for (const adminId of getTelegramAdminChatIds(env)) {
+      targets.add(adminId);
+    }
+  }
+
+  if (excludeChatId) {
+    targets.delete(excludeChatId);
+  }
+
+  await Promise.all(
+    Array.from(targets).map(async (chatId) => {
+      try {
+        await sendTelegramMessage(env, chatId, text);
+      } catch (error) {
+        console.error("Telegram notify failed", { chatId, error });
+      }
+    }),
+  );
+}
+
+function getTrackBaseUrl(env: Env): string {
+  const explicit = env.TRACK_BASE_URL?.trim();
+  if (explicit) {
+    return explicit.replace(/\/$/, "");
+  }
+
+  const successUrl = env.ROBO_SUCCESS_URL?.trim();
+  if (successUrl) {
+    try {
+      return new URL(successUrl).origin;
+    } catch {
+      // Ignore invalid URL and fallback to default domain.
+    }
+  }
+
+  return "https://makinari.art";
+}
+
 function escapeHtml(value: string): string {
   return value
     .replace(/&/g, "&amp;")
@@ -451,8 +719,9 @@ function buildOrderEmailHtml(args: {
   amountRub: string;
   items: OrderLineItem[];
   customer: OrderCustomer | null;
+  trackingUrl: string;
 }): string {
-  const { invId, amountRub, items, customer } = args;
+  const { invId, amountRub, items, customer, trackingUrl } = args;
   const deliveryText = formatDeliverySummary(customer);
   const rows = items.length > 0
     ? items
@@ -633,6 +902,14 @@ function buildOrderEmailHtml(args: {
               </tr>
               <tr>
                 <td style="padding: 22px 26px 26px;">
+                  <p style="margin: 0 0 12px;">
+                    <a
+                      href="${escapeHtml(trackingUrl)}"
+                      style="display:inline-block; text-decoration:none; background:#111827; color:#ffffff; padding:10px 16px; border-radius:10px; font-size:14px; font-weight:600;"
+                    >
+                      Отследить заказ
+                    </a>
+                  </p>
                   <p class="item-muted" style="margin: 0; color: #4b5563; font-size: 13px; line-height: 1.55;">
                     Если нужно изменить данные доставки, просто ответьте на это письмо.
                   </p>
@@ -773,14 +1050,95 @@ async function loadOrderByInvId(env: Env, invId: number): Promise<DbOrder | null
   }
 }
 
+async function loadOrderRecordById(env: Env, orderId: string): Promise<OrderRecord | null> {
+  return await env.DB.prepare(
+    `SELECT id, inv_id, status, fulfillment_status, fulfillment_status_updated_at,
+            amount_rub, items_json, customer_json, status_token, created_at, paid_at
+     FROM orders
+     WHERE id = ?
+     LIMIT 1`,
+  )
+    .bind(orderId)
+    .first<OrderRecord>();
+}
+
+async function loadOrderRecordByIdentifier(env: Env, identifier: string): Promise<OrderRecord | null> {
+  const normalized = identifier.trim();
+  if (!normalized) return null;
+
+  const byId = await loadOrderRecordById(env, normalized);
+  if (byId) {
+    return byId;
+  }
+
+  if (!/^\d+$/.test(normalized)) {
+    return null;
+  }
+
+  return await env.DB.prepare(
+    `SELECT id, inv_id, status, fulfillment_status, fulfillment_status_updated_at,
+            amount_rub, items_json, customer_json, status_token, created_at, paid_at
+     FROM orders
+     WHERE inv_id = ?
+     LIMIT 1`,
+  )
+    .bind(Number(normalized))
+    .first<OrderRecord>();
+}
+
+async function updateOrderFulfillmentStatus(env: Env, orderId: string, nextStatus: FulfillmentStatus): Promise<{
+  order: OrderRecord;
+  previousStatus: FulfillmentStatus;
+  updatedAt: string;
+} | null> {
+  const existingOrder = await loadOrderRecordById(env, orderId);
+  if (!existingOrder) {
+    return null;
+  }
+
+  const previousStatus = normalizeFulfillmentStatus(existingOrder.fulfillment_status);
+  const updatedAt = nowIso();
+
+  await env.DB.prepare(
+    "UPDATE orders SET fulfillment_status = ?, fulfillment_status_updated_at = ?, updated_at = ? WHERE id = ?",
+  )
+    .bind(nextStatus, updatedAt, updatedAt, orderId)
+    .run();
+
+  return {
+    order: {
+      ...existingOrder,
+      fulfillment_status: nextStatus,
+      fulfillment_status_updated_at: updatedAt,
+    },
+    previousStatus,
+    updatedAt,
+  };
+}
+
 async function markOrderPaid(env: Env, orderId: string, paymentMode: RoboMode): Promise<void> {
   const now = nowIso();
 
   try {
     await env.DB.prepare(
-      "UPDATE orders SET status = 'paid', payment_mode = COALESCE(payment_mode, ?), paid_at = ?, updated_at = ? WHERE id = ?",
+      `UPDATE orders
+       SET status = 'paid',
+           fulfillment_status = CASE
+             WHEN fulfillment_status IS NULL OR fulfillment_status = 'pending_payment'
+               THEN 'paid'
+             ELSE fulfillment_status
+           END,
+           fulfillment_status_updated_at = CASE
+             WHEN fulfillment_status IS NULL OR fulfillment_status = 'pending_payment'
+               THEN ?
+             ELSE fulfillment_status_updated_at
+           END,
+           payment_mode = COALESCE(payment_mode, ?),
+           paid_at = ?,
+           updated_at = ?
+       WHERE id = ?`,
     )
-      .bind(paymentMode, now, now, orderId)
+      .bind(now, paymentMode, now, now, orderId)
       .run();
   } catch (error) {
     if (!isMissingColumnError(error, "payment_mode")) {
@@ -788,9 +1146,23 @@ async function markOrderPaid(env: Env, orderId: string, paymentMode: RoboMode): 
     }
 
     await env.DB.prepare(
-      "UPDATE orders SET status = 'paid', paid_at = ?, updated_at = ? WHERE id = ?",
+      `UPDATE orders
+       SET status = 'paid',
+           fulfillment_status = CASE
+             WHEN fulfillment_status IS NULL OR fulfillment_status = 'pending_payment'
+               THEN 'paid'
+             ELSE fulfillment_status
+           END,
+           fulfillment_status_updated_at = CASE
+             WHEN fulfillment_status IS NULL OR fulfillment_status = 'pending_payment'
+               THEN ?
+             ELSE fulfillment_status_updated_at
+           END,
+           paid_at = ?,
+           updated_at = ?
+       WHERE id = ?`,
     )
-      .bind(now, now, orderId)
+      .bind(now, now, now, orderId)
       .run();
   }
 }
@@ -798,7 +1170,7 @@ async function markOrderPaid(env: Env, orderId: string, paymentMode: RoboMode): 
 async function loadOrderEmailData(env: Env, invId: number): Promise<OrderEmailData | null> {
   try {
     return await env.DB.prepare(
-      "SELECT id, inv_id, amount_rub, items_json, customer_json, email_sent_at FROM orders WHERE inv_id = ? LIMIT 1",
+      "SELECT id, inv_id, amount_rub, items_json, customer_json, status_token, email_sent_at FROM orders WHERE inv_id = ? LIMIT 1",
     )
       .bind(invId)
       .first<OrderEmailData>();
@@ -808,7 +1180,7 @@ async function loadOrderEmailData(env: Env, invId: number): Promise<OrderEmailDa
     }
 
     const legacyOrder = await env.DB.prepare(
-      "SELECT id, inv_id, amount_rub, items_json, customer_json FROM orders WHERE inv_id = ? LIMIT 1",
+      "SELECT id, inv_id, amount_rub, items_json, customer_json, status_token FROM orders WHERE inv_id = ? LIMIT 1",
     )
       .bind(invId)
       .first<{
@@ -817,6 +1189,7 @@ async function loadOrderEmailData(env: Env, invId: number): Promise<OrderEmailDa
         amount_rub: string;
         items_json: string;
         customer_json: string | null;
+        status_token: string;
       }>();
 
     if (!legacyOrder) {
@@ -864,6 +1237,7 @@ async function sendOrderPaidEmail(env: Env, order: OrderEmailData): Promise<bool
   }
 
   const items = parseOrderItems(order.items_json);
+  const trackingUrl = buildTrackingUrl(env, order.id, order.status_token);
   const itemsLines = items.length > 0
     ? items.map((item) => `- ${item.name} x${item.quantity} = ${(item.price * item.quantity).toFixed(0)} ₽`).join("\n")
     : "- Состав заказа уточняется";
@@ -876,6 +1250,7 @@ async function sendOrderPaidEmail(env: Env, order: OrderEmailData): Promise<bool
     "",
     `Итого: ${order.amount_rub} ₽`,
     `Доставка: ${formatDeliverySummary(customer)}`,
+    `Отследить заказ: ${trackingUrl}`,
   ];
 
   if (customer?.name) {
@@ -895,6 +1270,7 @@ async function sendOrderPaidEmail(env: Env, order: OrderEmailData): Promise<bool
     amountRub: order.amount_rub,
     items,
     customer,
+    trackingUrl,
   });
 
   const bcc = env.ORDERS_NOTIFICATION_EMAIL?.trim();
@@ -960,6 +1336,23 @@ function textResponse(request: Request, env: Env, body: string, status = 200): R
 
 function badRequest(request: Request, env: Env, message: string): Response {
   return jsonResponse(request, env, { error: message }, 400);
+}
+
+function unauthorized(request: Request, env: Env): Response {
+  return jsonResponse(request, env, { error: "Unauthorized" }, 401);
+}
+
+function hasAdminAccess(request: Request, env: Env): boolean {
+  const expected = env.ADMIN_STATUS_API_KEY?.trim();
+  if (!expected) return false;
+
+  const auth = request.headers.get("Authorization")?.trim();
+  if (auth && auth.toLowerCase().startsWith("bearer ")) {
+    return auth.slice(7).trim() === expected;
+  }
+
+  const headerToken = request.headers.get("x-admin-key")?.trim();
+  return Boolean(headerToken && headerToken === expected);
 }
 
 function generateStatusToken(): string {
@@ -1042,7 +1435,7 @@ async function handleDeliveryQuotes(request: Request, env: Env): Promise<Respons
   });
 }
 
-async function handleCreateCheckout(request: Request, env: Env): Promise<Response> {
+async function handleCreateCheckout(request: Request, env: Env, executionContext: ExecutionContext): Promise<Response> {
   let payload: CreateCheckoutPayload;
   try {
     payload = await request.json<CreateCheckoutPayload>();
@@ -1171,12 +1564,13 @@ async function handleCreateCheckout(request: Request, env: Env): Promise<Respons
     try {
       if (!useLegacySchema) {
         await env.DB.prepare(
-          `INSERT INTO orders (id, inv_id, status, payment_mode, amount_kopecks, amount_rub, items_json, customer_json, status_token, created_at, updated_at)
-           VALUES (?, ?, 'pending_payment', ?, ?, ?, ?, ?, ?, ?, ?)`,
+          `INSERT INTO orders (id, inv_id, status, fulfillment_status, fulfillment_status_updated_at, payment_mode, amount_kopecks, amount_rub, items_json, customer_json, status_token, created_at, updated_at)
+           VALUES (?, ?, 'pending_payment', 'pending_payment', ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         )
           .bind(
             orderId,
             invId,
+            createdAt,
             paymentMode,
             totalKopecks,
             amountRub,
@@ -1189,12 +1583,13 @@ async function handleCreateCheckout(request: Request, env: Env): Promise<Respons
           .run();
       } else {
         await env.DB.prepare(
-          `INSERT INTO orders (id, inv_id, status, amount_kopecks, amount_rub, items_json, customer_json, status_token, created_at, updated_at)
-           VALUES (?, ?, 'pending_payment', ?, ?, ?, ?, ?, ?, ?)`,
+          `INSERT INTO orders (id, inv_id, status, fulfillment_status, fulfillment_status_updated_at, amount_kopecks, amount_rub, items_json, customer_json, status_token, created_at, updated_at)
+           VALUES (?, ?, 'pending_payment', 'pending_payment', ?, ?, ?, ?, ?, ?, ?, ?)`,
         )
           .bind(
             orderId,
             invId,
+            createdAt,
             totalKopecks,
             amountRub,
             JSON.stringify(lineItems),
@@ -1222,6 +1617,27 @@ async function handleCreateCheckout(request: Request, env: Env): Promise<Respons
   if (!inserted) {
     console.error("Failed to create order", lastError);
     return jsonResponse(request, env, { error: "Не удалось создать заказ, попробуйте еще раз" }, 500);
+  }
+
+  if (isTelegramConfigured(env)) {
+    const telegramItems: OrderLineItem[] = lineItems.map((item) => ({
+      name: item.name,
+      quantity: item.quantity,
+      price: item.price,
+    }));
+    const message = buildTelegramOrderMessage({
+      title: "Новый заказ",
+      env,
+      orderId,
+      invId,
+      amountRub,
+      paymentStatus: "pending_payment",
+      fulfillmentStatus: "pending_payment",
+      items: telegramItems,
+      customer: normalizedCustomer,
+      statusToken,
+    });
+    executionContext.waitUntil(notifyTelegramTargets(env, message));
   }
 
   const signature = md5Hex(
@@ -1252,6 +1668,7 @@ async function handleCreateCheckout(request: Request, env: Env): Promise<Respons
     orderId,
     invId,
     statusToken,
+    trackingUrl: buildTrackingUrl(env, orderId, statusToken),
     amountRub,
     delivery: selectedDelivery ?? null,
     paymentMode: roboConfig.mode,
@@ -1317,23 +1734,41 @@ async function handleResult(request: Request, env: Env, executionContext: Execut
     return textResponse(request, env, "Amount mismatch", 400);
   }
 
-  if (order.status !== "paid") {
+  const becamePaid = order.status !== "paid";
+  if (becamePaid) {
     await markOrderPaid(env, order.id, matchedConfig.mode);
   }
 
   executionContext.waitUntil((async () => {
     try {
       const orderEmailData = await loadOrderEmailData(env, invId);
-      if (!orderEmailData || orderEmailData.email_sent_at) {
-        return;
+      if (orderEmailData && !orderEmailData.email_sent_at) {
+        const sent = await sendOrderPaidEmail(env, orderEmailData);
+        if (sent) {
+          await markOrderEmailSent(env, orderEmailData.id);
+        }
       }
 
-      const sent = await sendOrderPaidEmail(env, orderEmailData);
-      if (sent) {
-        await markOrderEmailSent(env, orderEmailData.id);
+      if (becamePaid && isTelegramConfigured(env)) {
+        const paidOrder = await loadOrderRecordById(env, order.id);
+        if (paidOrder) {
+          const message = buildTelegramOrderMessage({
+            title: "Оплата подтверждена",
+            env,
+            orderId: paidOrder.id,
+            invId: paidOrder.inv_id,
+            amountRub: paidOrder.amount_rub,
+            paymentStatus: "paid",
+            fulfillmentStatus: normalizeFulfillmentStatus(paidOrder.fulfillment_status),
+            items: parseOrderItems(paidOrder.items_json),
+            customer: parseCustomer(paidOrder.customer_json),
+            statusToken: paidOrder.status_token,
+          });
+          await notifyTelegramTargets(env, message);
+        }
       }
     } catch (error) {
-      console.error("Failed to send order email", error);
+      console.error("Failed to process paid-order side effects", error);
     }
   })());
 
@@ -1350,13 +1785,15 @@ async function handleStatus(request: Request, env: Env): Promise<Response> {
   }
 
   const order = await env.DB.prepare(
-    "SELECT id, inv_id, status, amount_rub, items_json, customer_json, created_at, paid_at FROM orders WHERE id = ? AND status_token = ? LIMIT 1",
+    "SELECT id, inv_id, status, fulfillment_status, fulfillment_status_updated_at, amount_rub, items_json, customer_json, created_at, paid_at FROM orders WHERE id = ? AND status_token = ? LIMIT 1",
   )
     .bind(orderId, token)
     .first<{
       id: string;
       inv_id: number;
       status: string;
+      fulfillment_status: string | null;
+      fulfillment_status_updated_at: string | null;
       amount_rub: string;
       items_json: string;
       customer_json: string | null;
@@ -1375,11 +1812,20 @@ async function handleStatus(request: Request, env: Env): Promise<Response> {
     lineTotal: Number((item.price * item.quantity).toFixed(2)),
   }));
   const customer = parseCustomer(order.customer_json);
+  const fulfillmentStatus = normalizeFulfillmentStatus(order.fulfillment_status);
 
-  return jsonResponse(request, env, {
+  const timeline = [
+    { key: "pending_payment", at: order.created_at },
+    { key: "paid", at: order.paid_at },
+    { key: fulfillmentStatus, at: order.fulfillment_status_updated_at ?? order.paid_at ?? order.created_at },
+  ].filter((event, index, arr) => arr.findIndex((item) => item.key === event.key) === index);
+
+  const response = jsonResponse(request, env, {
     id: order.id,
     invId: order.inv_id,
     status: order.status,
+    fulfillmentStatus,
+    fulfillmentStatusUpdatedAt: order.fulfillment_status_updated_at,
     amountRub: order.amount_rub,
     items,
     delivery: customer?.delivery
@@ -1393,9 +1839,223 @@ async function handleStatus(request: Request, env: Env): Promise<Response> {
         etaMaxDays: customer.delivery.etaMaxDays,
       }
       : null,
+    timeline,
     createdAt: order.created_at,
     paidAt: order.paid_at,
   });
+
+  response.headers.set("Cache-Control", "no-store");
+  return response;
+}
+
+async function handleAdminUpdateStatus(request: Request, env: Env): Promise<Response> {
+  if (!hasAdminAccess(request, env)) {
+    return unauthorized(request, env);
+  }
+
+  let payload: AdminUpdateStatusPayload;
+  try {
+    payload = await request.json<AdminUpdateStatusPayload>();
+  } catch {
+    return badRequest(request, env, "Некорректный JSON");
+  }
+
+  const orderId = payload.orderId?.trim();
+  if (!orderId) {
+    return badRequest(request, env, "orderId обязателен");
+  }
+
+  if (!payload.fulfillmentStatus) {
+    return badRequest(request, env, "fulfillmentStatus обязателен");
+  }
+  if (!isFulfillmentStatus(payload.fulfillmentStatus)) {
+    return badRequest(request, env, "Некорректный fulfillmentStatus");
+  }
+  const nextStatus = payload.fulfillmentStatus;
+
+  const updateResult = await updateOrderFulfillmentStatus(env, orderId, nextStatus);
+  if (!updateResult) {
+    return jsonResponse(request, env, { error: "Заказ не найден" }, 404);
+  }
+
+  if (isTelegramConfigured(env) && updateResult.previousStatus !== nextStatus) {
+    const message = buildTelegramOrderMessage({
+      title: `Статус обновлен: ${formatFulfillmentStatus(nextStatus)}`,
+      env,
+      orderId: updateResult.order.id,
+      invId: updateResult.order.inv_id,
+      amountRub: updateResult.order.amount_rub,
+      paymentStatus: updateResult.order.status,
+      fulfillmentStatus: nextStatus,
+      items: parseOrderItems(updateResult.order.items_json),
+      customer: parseCustomer(updateResult.order.customer_json),
+      statusToken: updateResult.order.status_token,
+    });
+    await notifyTelegramTargets(env, message);
+  }
+
+  return jsonResponse(request, env, {
+    ok: true,
+    orderId,
+    invId: updateResult.order.inv_id,
+    status: updateResult.order.status,
+    fulfillmentStatus: nextStatus,
+    updatedAt: updateResult.updatedAt,
+  });
+}
+
+function getTelegramWebhookSecret(env: Env): string {
+  return env.TELEGRAM_WEBHOOK_SECRET?.trim() || "";
+}
+
+function isTelegramAdminChat(env: Env, chatId: string): boolean {
+  const admins = getTelegramAdminChatIds(env);
+  return admins.includes(chatId);
+}
+
+function parseTelegramCommand(text: string): { command: string; args: string[] } {
+  const [rawCommand, ...args] = text.trim().split(/\s+/);
+  const command = rawCommand.split("@")[0]?.toLowerCase() ?? "";
+  return { command, args };
+}
+
+function buildTelegramHelpMessage(): string {
+  return [
+    "Команды:",
+    "/help - справка",
+    "/order <id|invId> - показать заказ",
+    "/status <id|invId> <pending_payment|paid|processing|shipped|delivered|completed|canceled> - сменить статус",
+  ].join("\n");
+}
+
+async function handleTelegramOrderCommand(env: Env, chatId: string, identifier: string): Promise<void> {
+  const order = await loadOrderRecordByIdentifier(env, identifier);
+  if (!order) {
+    await sendTelegramMessage(env, chatId, "Заказ не найден");
+    return;
+  }
+
+  const message = buildTelegramOrderMessage({
+    title: "Детали заказа",
+    env,
+    orderId: order.id,
+    invId: order.inv_id,
+    amountRub: order.amount_rub,
+    paymentStatus: order.status,
+    fulfillmentStatus: normalizeFulfillmentStatus(order.fulfillment_status),
+    items: parseOrderItems(order.items_json),
+    customer: parseCustomer(order.customer_json),
+    statusToken: order.status_token,
+  });
+  await sendTelegramMessage(env, chatId, message);
+}
+
+async function handleTelegramStatusCommand(env: Env, chatId: string, identifier: string, statusRaw: string): Promise<void> {
+  if (!isFulfillmentStatus(statusRaw)) {
+    await sendTelegramMessage(
+      env,
+      chatId,
+      "Некорректный статус. Допустимо: pending_payment, paid, processing, shipped, delivered, completed, canceled",
+    );
+    return;
+  }
+
+  const order = await loadOrderRecordByIdentifier(env, identifier);
+  if (!order) {
+    await sendTelegramMessage(env, chatId, "Заказ не найден");
+    return;
+  }
+
+  const updateResult = await updateOrderFulfillmentStatus(env, order.id, statusRaw);
+  if (!updateResult) {
+    await sendTelegramMessage(env, chatId, "Не удалось обновить статус");
+    return;
+  }
+
+  const confirmation = [
+    "Статус обновлен",
+    `Заказ #${updateResult.order.inv_id}`,
+    `Новый статус: ${formatFulfillmentStatus(statusRaw)}`,
+    `Обновлено: ${updateResult.updatedAt}`,
+  ].join("\n");
+  await sendTelegramMessage(env, chatId, confirmation);
+
+  const broadcast = buildTelegramOrderMessage({
+    title: `Статус обновлен: ${formatFulfillmentStatus(statusRaw)}`,
+    env,
+    orderId: updateResult.order.id,
+    invId: updateResult.order.inv_id,
+    amountRub: updateResult.order.amount_rub,
+    paymentStatus: updateResult.order.status,
+    fulfillmentStatus: statusRaw,
+    items: parseOrderItems(updateResult.order.items_json),
+    customer: parseCustomer(updateResult.order.customer_json),
+    statusToken: updateResult.order.status_token,
+  });
+  await notifyTelegramTargets(env, broadcast, chatId);
+}
+
+async function handleTelegramWebhook(request: Request, env: Env, pathname: string): Promise<Response> {
+  if (!isTelegramConfigured(env)) {
+    return jsonResponse(request, env, { error: "Telegram not configured" }, 503);
+  }
+
+  const expectedSecret = getTelegramWebhookSecret(env);
+  if (expectedSecret) {
+    const actualSecret = pathname.replace("/api/telegram/webhook", "").replace(/^\/+/, "");
+    if (actualSecret !== expectedSecret) {
+      return unauthorized(request, env);
+    }
+  }
+
+  let update: TelegramUpdate;
+  try {
+    update = await request.json<TelegramUpdate>();
+  } catch {
+    return badRequest(request, env, "Некорректный JSON");
+  }
+
+  const message = update.message ?? update.edited_message;
+  const text = message?.text?.trim() ?? "";
+  const chatId = String(message?.chat?.id ?? "");
+
+  if (!text || !chatId) {
+    return jsonResponse(request, env, { ok: true });
+  }
+
+  if (!isTelegramAdminChat(env, chatId)) {
+    return jsonResponse(request, env, { ok: true });
+  }
+
+  const { command, args } = parseTelegramCommand(text);
+  if (command === "/start" || command === "/help") {
+    await sendTelegramMessage(env, chatId, buildTelegramHelpMessage());
+    return jsonResponse(request, env, { ok: true });
+  }
+
+  if (command === "/order") {
+    const identifier = args[0];
+    if (!identifier) {
+      await sendTelegramMessage(env, chatId, "Использование: /order <id|invId>");
+      return jsonResponse(request, env, { ok: true });
+    }
+    await handleTelegramOrderCommand(env, chatId, identifier);
+    return jsonResponse(request, env, { ok: true });
+  }
+
+  if (command === "/status") {
+    const identifier = args[0];
+    const nextStatus = args[1]?.toLowerCase();
+    if (!identifier || !nextStatus) {
+      await sendTelegramMessage(env, chatId, "Использование: /status <id|invId> <status>");
+      return jsonResponse(request, env, { ok: true });
+    }
+    await handleTelegramStatusCommand(env, chatId, identifier, nextStatus);
+    return jsonResponse(request, env, { ok: true });
+  }
+
+  await sendTelegramMessage(env, chatId, buildTelegramHelpMessage());
+  return jsonResponse(request, env, { ok: true });
 }
 
 export default {
@@ -1412,7 +2072,12 @@ export default {
         paymentMode: getActiveRoboMode(env),
         emailEnabled: Boolean(env.RESEND_API_KEY?.trim() && env.RESEND_FROM?.trim()),
         deliveryEnabled: true,
+        telegramEnabled: isTelegramConfigured(env),
       });
+    }
+
+    if ((url.pathname === "/api/telegram/webhook" || url.pathname.startsWith("/api/telegram/webhook/")) && request.method === "POST") {
+      return handleTelegramWebhook(request, env, url.pathname);
     }
 
     if (url.pathname === "/api/delivery/quotes" && request.method === "POST") {
@@ -1420,7 +2085,7 @@ export default {
     }
 
     if (url.pathname === "/api/checkout/create" && request.method === "POST") {
-      return handleCreateCheckout(request, env);
+      return handleCreateCheckout(request, env, ctx);
     }
 
     if (url.pathname === "/api/checkout/result" && (request.method === "POST" || request.method === "GET")) {
@@ -1429,6 +2094,14 @@ export default {
 
     if (url.pathname === "/api/checkout/status" && request.method === "GET") {
       return handleStatus(request, env);
+    }
+
+    if (url.pathname === "/api/orders/track" && request.method === "GET") {
+      return handleStatus(request, env);
+    }
+
+    if (url.pathname === "/api/admin/orders/status" && request.method === "POST") {
+      return handleAdminUpdateStatus(request, env);
     }
 
     return jsonResponse(request, env, { error: "Not found" }, 404);

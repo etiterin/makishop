@@ -72,6 +72,10 @@ export function PaymentSuccess() {
   const attemptsRef = useRef(0);
   const intervalRef = useRef<number | null>(null);
   const checkoutRef = useMemo(() => getLastCheckout(), []);
+  const trackingLink = useMemo(() => {
+    if (!checkoutRef) return null;
+    return `/track?id=${encodeURIComponent(checkoutRef.id)}&token=${encodeURIComponent(checkoutRef.token)}`;
+  }, [checkoutRef]);
 
   useEffect(() => {
     return () => {
@@ -217,6 +221,11 @@ export function PaymentSuccess() {
             <Button asChild>
               <Link to="/shop">В каталог</Link>
             </Button>
+            {trackingLink && (
+              <Button variant="outline" asChild>
+                <Link to={trackingLink}>Отследить заказ</Link>
+              </Button>
+            )}
             <Button variant="outline" asChild>
               <Link to="/contact">Написать по заказу</Link>
             </Button>
