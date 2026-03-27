@@ -34,13 +34,13 @@ export function Contact() {
     },
     {
       number: '02',
-      title: 'Отправь',
-      description: 'Скопируй текст заказа и отправь мне в ЛС Telegram (@Makinari)',
+      title: 'Оформи',
+      description: 'Перейди в оформление заказа, укажи контакты и данные для доставки',
     },
     {
       number: '03',
-      title: 'Получи',
-      description: "Я все упакую с любовью и отправлю тебе посылочку",
+      title: 'Оплати и отслеживай',
+      description: 'Оплати заказ онлайн и получи страницу/письмо для отслеживания статуса',
     },
   ];
   
@@ -115,11 +115,6 @@ export function Contact() {
                   <div className="text-6xl font-bold text-accent/20">{step.number}</div>
                   <h3 className="text-xl">{step.title}</h3>
                   <p className="text-muted-foreground">{step.description}</p>
-                   {index === 1 && (
-                      <a href="https://t.me/Makinari" target="_blank" rel="noreferrer" className="inline-block mt-2 text-accent hover:underline text-sm font-medium">
-                          Написать Маки →
-                      </a>
-                   )}
                 </div>
                 
                 {/* Connecting line */}
