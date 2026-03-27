@@ -247,6 +247,37 @@
         "/images/uploads/nanajfjfjfjvjf.jpg"
       ],
       "description": "Значок с покрытием Софт-тач"
+    },
+    {
+      "inStock": true,
+      "id": 17,
+      "name": "Стикерпак А6 Лягушки",
+      "price": 200,
+      "category": "sticker",
+      "fandoms": [
+        "Animals"
+      ],
+      "images": [
+        "/images/uploads/lagydhfhhf.jpg",
+        "/images/uploads/lagushfhvvnughvh.jpg"
+      ],
+      "description": "А6 стикерпак на виниловой пленке"
+    },
+    {
+      "inStock": true,
+      "id": 18,
+      "name": "Золотой стикерпак Котики Бастет",
+      "price": 300,
+      "category": "sticker",
+      "fandoms": [
+        "Animals",
+        "Fantasy"
+      ],
+      "images": [
+        "/images/uploads/bastgklggogo.jpg",
+        "/images/uploads/basturhgventhrhgvrue.jpg"
+      ],
+      "description": "Сияющий золотой стикерпак по мотивам Египетской мифологии \n\nКотики и золото сочетаются идеально"
     }
   ]
 }
