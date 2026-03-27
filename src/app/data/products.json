@@ -305,6 +305,20 @@
         "/images/uploads/shfovobjh.jpg"
       ],
       "description": "Вытянутый нестандартный формат стикеров по мотивам хоррор-игры"
+    },
+    {
+      "inStock": true,
+      "id": 21,
+      "name": "Брелок Хинако",
+      "price": 650,
+      "category": "keychain",
+      "fandoms": [
+        "Creepy"
+      ],
+      "images": [
+        "/images/uploads/hinakofuhfhv.jpg",
+        "/images/uploads/hinakofuufnv.jpg"
+      ]
     }
   ]
 }
