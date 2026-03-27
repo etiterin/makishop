@@ -290,6 +290,21 @@
         "/images/uploads/kitshfhhv.jpg"
       ],
       "description": "Стикерпак А6 с сахарной ламинацией"
+    },
+    {
+      "inStock": true,
+      "id": 20,
+      "name": "Стикерлайн Сайлент Хилл Ф",
+      "price": 200,
+      "category": "sticker",
+      "fandoms": [
+        "Creepy"
+      ],
+      "images": [
+        "/images/uploads/shffijvnyjgdo.jpg",
+        "/images/uploads/shfovobjh.jpg"
+      ],
+      "description": "Вытянутый нестандартный формат стикеров по мотивам хоррор-игры"
     }
   ]
 }
