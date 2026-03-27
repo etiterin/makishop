@@ -233,6 +233,20 @@
         "/images/uploads/fapuhdhdbd.jpg"
       ],
       "description": "Значок с покрытием Софт-тач"
+    },
+    {
+      "inStock": true,
+      "id": 16,
+      "name": "Значок Сердечко Наначи",
+      "price": 400,
+      "category": "badge",
+      "fandoms": [
+        "Made in Abyss"
+      ],
+      "images": [
+        "/images/uploads/nanajfjfjfjvjf.jpg"
+      ],
+      "description": "Значок с покрытием Софт-тач"
     }
   ]
 }
