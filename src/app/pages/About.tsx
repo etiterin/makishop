@@ -1,22 +1,22 @@
 import { motion } from 'motion/react';
 import { ImageWithFallback } from '../components/figma/ImageWithFallback';
-import { Heart, Palette, Sparkles, Scroll, Star, Users } from 'lucide-react';
+import { MapPin, Palette, Scroll, Sparkles } from 'lucide-react';
 
 export function About() {
   const values = [
     {
       icon: Palette,
-      title: 'Original & Fan Art',
+      title: 'Оригинальный и фан-арт',
       description: 'От оригинальных персонажей до любимых героев аниме, игр и мультфильмов.',
     },
     {
       icon: Sparkles,
-      title: 'Handmade Exclusive',
+      title: 'Ручная работа',
       description: 'Каждый принт и мерч создан мной лично. Никаких картинок из интернета — только авторское творчество.',
     },
     {
       icon: Scroll,
-      title: 'Limited Edition',
+      title: 'Ограниченный тираж',
       description: 'Тираж всех позиций ограничен. Успей пополнить свой инвентарь уникальным лутом.',
     },
   ];
@@ -71,15 +71,15 @@ export function About() {
           >
             <div className="aspect-square bg-card rounded-3xl overflow-hidden shadow-xl">
               <ImageWithFallback
-                src="https://images.unsplash.com/photo-1593382067395-ace3045a1547?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxhcnRpc3QlMjBwb3J0cmFpdCUyMGNyZWF0aXZlfGVufDF8fHx8MTc2NjMwNTE2N3ww&ixlib=rb-4.1.0&q=80&w=1080"
-                alt="Artist portrait"
+                src="/images/author-portrait.webp"
+                alt="Фото автора"
                 className="w-full h-full object-cover"
               />
             </div>
           </motion.div>
         </div>
 
-        {/* 2024 Recap / Chronicles */}
+        {/* Offline Shelves */}
         <motion.div
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
@@ -89,54 +89,50 @@ export function About() {
         >
             <div className="text-center space-y-2">
                 <h2 className="text-3xl flex items-center justify-center gap-2">
-                    <Star className="w-6 h-6 text-accent" />
-                    Хроники Пути
-                    <Star className="w-6 h-6 text-accent" />
+                    <MapPin className="w-6 h-6 text-accent" />
+                    Полочки
                 </h2>
-                <p className="text-muted-foreground">История о росте, магии творчества и теплых встречах</p>
+                <p className="text-muted-foreground">Где можно купить мои товары офлайн</p>
             </div>
 
-            <div className="grid md:grid-cols-2 gap-12">
-                <div className="space-y-6 text-muted-foreground leading-relaxed">
-                    <p>
-                        Этот год стал для меня очень насыщенным, тёплым и по-настоящему продуктивным.
-                        Годом, в котором было много рисования, сомнений, радостей, маленьких побед и большого роста.
-                    </p>
-                    <p>
-                        Я создала множество красивых и вдохновляющих работ — и каждая из них стала частью моего пути как художника. (★^O^★)
-                    </p>
-                    <p>
-                         Особое место заняли коллаборации с моим любимым маркетом <strong>Заря</strong> и солнечной маскоткой — <strong>Мандаринкой</strong>.
-                        Это была целая история про доверие, поддержку и удовольствие от совместного творчества. ᕙʕಠᴥಠʔᕗ
-                    </p>
-                    <p>
-                        В этом году я наконец исполнила свою давнюю задумку — сделала мерч по <strong>«Евангелиону»</strong> и <strong>«Покемонам»</strong> 🤍o.(+･`ω･+).o.
-                        Это мои самые любимые фандомы, и вложить в них часть себя было особенно ценно.
-                    </p>
-                </div>
-                <div className="space-y-6">
-                     <h3 className="text-xl font-medium flex items-center gap-2">
-                        <Users className="w-5 h-5" />
-                        Маркеты и встречи
-                     </h3>
-                     <p className="text-muted-foreground">
-                        Этот год подарил мне много опыта и знакомств. Я посетила маркеты <strong>Заря</strong>, <strong>Кико</strong>, <strong>ФурМаркет</strong>, <strong>Ласковый Маркет</strong>.
-                        Познакомилась с невероятными авторами и посетителями — каждое общение вдохновляло продолжать. ╰(˵ヘωヘ✿)╯
-                     </p>
-                     
-                     <div className="bg-background rounded-xl p-6 shadow-sm border border-border/50">
-                        <h4 className="font-medium mb-3">Новые полочки:</h4>
-                        <div className="flex flex-wrap gap-2">
-                            {['Созвездие', 'Арт Хаус', 'Ушастая Полка'].map(shelf => (
-                                <span key={shelf} className="px-3 py-1 bg-accent/10 text-accent-foreground rounded-full text-sm">
-                                    ✶ {shelf}
-                                </span>
-                            ))}
+            <div className="grid md:grid-cols-2 gap-6">
+                <div className="bg-background rounded-xl p-6 shadow-sm border border-border/50 space-y-4">
+                    <h3 className="text-xl font-medium">Москва</h3>
+                    <div className="space-y-4">
+                        <div className="border-b border-border/60 pb-4">
+                            <p className="font-medium">1. Ушастая Полка</p>
+                            <p className="text-sm text-muted-foreground">Адрес: ул. 2-я Тверская-Ямская, д.54, Москва</p>
+                            <p className="text-sm text-muted-foreground">Метро Белорусская, выход с кольцевой линии метро №3</p>
+                            <p className="text-sm text-muted-foreground">Номер полки: L 7.5</p>
                         </div>
-                        <p className="mt-3 text-sm text-muted-foreground">
-                            Это особенное чувство — видеть, как твои работы находят свой дом. (^_^)ヾ(^^ )
+                        <div>
+                            <p className="font-medium">2. Арт-хаус</p>
+                            <p className="text-sm text-muted-foreground">Адрес: Воронцовская 13/14с3, Москва</p>
+                            <p className="text-sm text-muted-foreground">Метро Марксистская, выход из метро №5</p>
+                            <p className="text-sm text-muted-foreground">Номер полки: 24.3</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div className="bg-background rounded-xl p-6 shadow-sm border border-border/50 space-y-4">
+                    <h3 className="text-xl font-medium">Санкт-Петербург</h3>
+                    <div>
+                        <p className="font-medium">3. Созвездие</p>
+                        <p className="text-sm text-muted-foreground">
+                            Адрес: Лиговский проспект, 111-113-115Б / Печатника Григорьева, 8 (бизнес-центр «Рост»)
                         </p>
-                     </div>
+                        <p className="text-sm text-muted-foreground">Метро Лиговский проспект</p>
+                        <p className="text-sm text-muted-foreground">Номер полки: 36.5</p>
+                    </div>
+                </div>
+
+                <div className="bg-background rounded-xl p-6 shadow-sm border border-border/50 space-y-4 md:col-span-2">
+                    <h3 className="text-xl font-medium">Новосибирск</h3>
+                    <div>
+                        <p className="font-medium">4. Лисья Полка</p>
+                        <p className="text-sm text-muted-foreground">Адрес: Новосибирск, Красный проспект, 186</p>
+                        <p className="text-sm text-muted-foreground">Номер полки: 26.4</p>
+                    </div>
                 </div>
             </div>
         </motion.div>
@@ -172,31 +168,6 @@ export function About() {
             ))}
           </div>
         </div>
-        
-        {/* Workspace Image / Artwork Summary */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.6 }}
-          className="space-y-4"
-        >
-          <h2 className="text-3xl text-center">Итоги года в артах</h2>
-          <div className="aspect-video bg-card rounded-3xl overflow-hidden shadow-xl relative group">
-             {/* Placeholder for Artwork Summary */}
-            <ImageWithFallback
-              src="https://images.unsplash.com/photo-1513364776144-60967b0f800f?q=80&w=1080&auto=format&fit=crop"
-              alt="2024 Artwork Summary"
-              className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity duration-500"
-            />
-            <div className="absolute inset-0 flex items-center justify-center">
-                <span className="bg-black/50 text-white px-4 py-2 rounded-lg backdrop-blur-sm">Место для вашего коллажа с итогами года</span>
-            </div>
-          </div>
-          <p className="text-center text-muted-foreground">
-             Каждая работа — это маленькая победа и шаг вперед.
-          </p>
-        </motion.div>
       </div>
     </div>
   );
