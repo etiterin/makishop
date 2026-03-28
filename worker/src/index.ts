@@ -58,6 +58,8 @@ type CreateCheckoutPayload = {
   customer?: {
     email?: string;
     name?: string;
+    phone?: string;
+    telegram?: string;
     contact?: string;
     comment?: string;
     deliveryMode?: DeliveryMode | string;
@@ -168,6 +170,8 @@ type OrderEmailData = {
 type OrderCustomer = {
   email?: string;
   name?: string;
+  phone?: string;
+  telegram?: string;
   contact?: string;
   comment?: string;
   deliveryMode?: DeliveryMode | string;
@@ -458,10 +462,16 @@ function parseCustomer(raw: string | null): OrderCustomer | null {
     }
   }
 
+  const phone = typeof parsed.phone === "string" ? parsed.phone : undefined;
+  const telegram = typeof parsed.telegram === "string" ? parsed.telegram : undefined;
+  const contact = typeof parsed.contact === "string" ? parsed.contact : (phone ?? telegram);
+
   return {
     email: typeof parsed.email === "string" ? parsed.email : undefined,
     name: typeof parsed.name === "string" ? parsed.name : undefined,
-    contact: typeof parsed.contact === "string" ? parsed.contact : undefined,
+    phone,
+    telegram,
+    contact,
     comment: typeof parsed.comment === "string" ? parsed.comment : undefined,
     deliveryMode: normalizeDeliveryMode(
       typeof parsed.deliveryMode === "string" ? parsed.deliveryMode : undefined,
@@ -612,7 +622,11 @@ function buildTelegramOrderMessage(args: {
   const customerLines: string[] = [];
   if (customer?.email) customerLines.push(`Email: ${customer.email}`);
   if (customer?.name) customerLines.push(`Имя: ${customer.name}`);
-  if (customer?.contact) customerLines.push(`Телеграм/телефон: ${customer.contact}`);
+  if (customer?.phone) customerLines.push(`Телефон: ${customer.phone}`);
+  if (customer?.telegram) customerLines.push(`Telegram: ${customer.telegram}`);
+  if (!customer?.phone && !customer?.telegram && customer?.contact) {
+    customerLines.push(`Контакт: ${customer.contact}`);
+  }
   if (customer?.comment) customerLines.push(`Комментарий: ${customer.comment}`);
 
   const lines = [
@@ -767,7 +781,13 @@ function buildOrderEmailHtml(args: {
   if (customer?.name) {
     customerBlocks.push(`<p class="item-name" style="margin: 0 0 4px; color: #1f2937; font-size: 14px;">Имя: ${escapeHtml(customer.name)}</p>`);
   }
-  if (customer?.contact) {
+  if (customer?.phone) {
+    customerBlocks.push(`<p class="item-name" style="margin: 0 0 4px; color: #1f2937; font-size: 14px;">Телефон: ${escapeHtml(customer.phone)}</p>`);
+  }
+  if (customer?.telegram) {
+    customerBlocks.push(`<p class="item-name" style="margin: 0 0 4px; color: #1f2937; font-size: 14px;">Telegram: ${escapeHtml(customer.telegram)}</p>`);
+  }
+  if (!customer?.phone && !customer?.telegram && customer?.contact) {
     customerBlocks.push(`<p class="item-name" style="margin: 0 0 4px; color: #1f2937; font-size: 14px;">Контакт: ${escapeHtml(customer.contact)}</p>`);
   }
   if (customer?.comment) {
@@ -1272,7 +1292,13 @@ async function sendOrderPaidEmail(env: Env, order: OrderEmailData): Promise<bool
   if (customer?.name) {
     textParts.push(`Имя: ${customer.name}`);
   }
-  if (customer?.contact) {
+  if (customer?.phone) {
+    textParts.push(`Телефон: ${customer.phone}`);
+  }
+  if (customer?.telegram) {
+    textParts.push(`Telegram: ${customer.telegram}`);
+  }
+  if (!customer?.phone && !customer?.telegram && customer?.contact) {
     textParts.push(`Контакт: ${customer.contact}`);
   }
   if (customer?.comment) {
@@ -1514,10 +1540,17 @@ async function handleCreateCheckout(request: Request, env: Env, executionContext
     return badRequest(request, env, "Сумма заказа должна быть больше нуля");
   }
   const subtotalRub = totalKopecks / 100;
-  const normalizedContact = sanitizeText(payload.customer?.contact, 80);
+  const normalizedLegacyContact = sanitizeText(payload.customer?.contact, 80);
+  const normalizedPhone = sanitizeText(payload.customer?.phone, 80) ?? normalizedLegacyContact;
+  const normalizedTelegram = sanitizeText(payload.customer?.telegram, 80);
+  const normalizedContact = normalizedLegacyContact ?? normalizedPhone ?? normalizedTelegram;
+
+  if (!isDeliveryProvider(requestedDeliveryMode)) {
+    return badRequest(request, env, "Выберите корректный способ доставки");
+  }
 
   let selectedDelivery: OrderCustomerDelivery | undefined;
-  if (isDeliveryProvider(requestedDeliveryMode)) {
+  {
     const destinationCity = sanitizeText(payload.customer?.delivery?.destinationCity, 80);
     const destinationPostalCodeRaw = payload.customer?.delivery?.destinationPostalCode?.trim();
     const destinationPostalCode = isValidRussianPostalCode(destinationPostalCodeRaw)
@@ -1541,7 +1574,7 @@ async function handleCreateCheckout(request: Request, env: Env, executionContext
     }
 
     if (requestedDeliveryMode === "russian_post") {
-      if (selectedOption.optionCode === "post_phone" && !isLikelyPhone(normalizedContact)) {
+      if (selectedOption.optionCode === "post_phone" && !isLikelyPhone(normalizedPhone)) {
         return badRequest(request, env, "Для Почты России (по телефону) укажите корректный номер телефона");
       }
       if (selectedOption.optionCode === "post_address" && (!destinationPostalCode || !destinationAddress)) {
@@ -1549,7 +1582,7 @@ async function handleCreateCheckout(request: Request, env: Env, executionContext
       }
     }
 
-    if ((requestedDeliveryMode === "ozon" || requestedDeliveryMode === "yandex") && !isLikelyPhone(normalizedContact)) {
+    if ((requestedDeliveryMode === "ozon" || requestedDeliveryMode === "yandex") && !isLikelyPhone(normalizedPhone)) {
       return badRequest(request, env, "Для Ozon и Яндекс доставки нужен корректный номер телефона");
     }
 
@@ -1574,6 +1607,8 @@ async function handleCreateCheckout(request: Request, env: Env, executionContext
   const normalizedCustomer: OrderCustomer = {
     email: normalizedEmail,
     name: sanitizeText(payload.customer?.name, 80),
+    phone: normalizedPhone,
+    telegram: normalizedTelegram,
     contact: normalizedContact,
     comment: sanitizeText(payload.customer?.comment, 500),
     deliveryMode: requestedDeliveryMode,

@@ -14,8 +14,8 @@ type CreateCheckoutResponse = {
   statusToken: string;
 };
 
-type DeliveryMode = 'manual_confirmation' | 'russian_post' | 'ozon' | 'yandex';
-type DeliveryProvider = Exclude<DeliveryMode, 'manual_confirmation'>;
+type DeliveryMode = 'russian_post' | 'ozon' | 'yandex';
+type DeliveryProvider = DeliveryMode;
 type PostDeliveryMethod = 'phone' | 'address';
 
 type DeliveryQuoteOption = {
@@ -30,7 +30,8 @@ type DeliveryQuoteOption = {
 type CheckoutDraft = {
   email: string;
   name: string;
-  contact: string;
+  phone: string;
+  telegram: string;
   comment: string;
   deliveryMode: DeliveryMode;
   destinationPostalCode: string;
@@ -42,10 +43,6 @@ const DELIVERY_OPTIONS: Array<{
   value: DeliveryMode;
   label: string;
 }> = [
-  {
-    value: 'manual_confirmation',
-    label: 'Уточнить после оплаты',
-  },
   {
     value: 'russian_post',
     label: 'Почта России',
@@ -99,13 +96,13 @@ async function parseJsonResponse<T>(response: Response): Promise<T> {
 const CHECKOUT_DRAFT_STORAGE_KEY = 'checkoutDraft';
 
 function getDeliveryToneClass(mode: DeliveryMode): string {
-  if (mode === 'russian_post') {
+  if (mode === 'ozon') {
     return 'border-blue-500/40 bg-blue-500/10 text-blue-700 dark:text-blue-300';
   }
-  if (mode === 'ozon') {
+  if (mode === 'yandex') {
     return 'border-yellow-500/50 bg-yellow-500/15 text-yellow-800 dark:text-yellow-300';
   }
-  if (mode === 'yandex') {
+  if (mode === 'russian_post') {
     return 'border-sky-500/40 bg-sky-500/10 text-sky-700 dark:text-sky-300';
   }
   return 'border-border bg-muted/30 text-muted-foreground';
@@ -115,8 +112,7 @@ function buildSelectedDeliveryOption(
   mode: DeliveryMode,
   postMethod: PostDeliveryMethod,
   subtotalRub: number,
-): DeliveryQuoteOption | null {
-  if (mode === 'manual_confirmation') return null;
+): DeliveryQuoteOption {
   const isFree = subtotalRub >= FREE_DELIVERY_THRESHOLD_RUB;
 
   if (mode === 'russian_post') {
@@ -165,12 +161,13 @@ function getCheckoutDraft(): CheckoutDraft | null {
       || parsed.deliveryMode === 'ozon'
       || parsed.deliveryMode === 'yandex'
         ? parsed.deliveryMode
-        : 'manual_confirmation';
+        : 'russian_post';
 
     return {
       email: String(parsed.email ?? ''),
       name: String(parsed.name ?? ''),
-      contact: String(parsed.contact ?? ''),
+      phone: String(parsed.phone ?? (parsed as { contact?: string }).contact ?? ''),
+      telegram: String(parsed.telegram ?? ''),
       comment: String(parsed.comment ?? ''),
       deliveryMode,
       destinationPostalCode: String(parsed.destinationPostalCode ?? ''),
@@ -191,10 +188,11 @@ export function Checkout() {
   const draft = useMemo(() => getCheckoutDraft(), []);
   const [email, setEmail] = useState(() => draft?.email ?? '');
   const [name, setName] = useState(() => draft?.name ?? '');
-  const [contact, setContact] = useState(() => draft?.contact ?? '');
+  const [phone, setPhone] = useState(() => draft?.phone ?? '');
+  const [telegram, setTelegram] = useState(() => draft?.telegram ?? '');
   const [comment, setComment] = useState(() => draft?.comment ?? '');
   const [deliveryMode, setDeliveryMode] = useState<DeliveryMode>(
-    () => draft?.deliveryMode ?? 'manual_confirmation',
+    () => draft?.deliveryMode ?? 'russian_post',
   );
   const [destinationPostalCode, setDestinationPostalCode] = useState(() => draft?.destinationPostalCode ?? '');
   const [destinationAddress, setDestinationAddress] = useState(() => draft?.destinationAddress ?? '');
@@ -217,8 +215,13 @@ export function Checkout() {
     () => buildSelectedDeliveryOption(deliveryMode, postDeliveryMethod, total),
     [deliveryMode, postDeliveryMethod, total],
   );
-  const deliveryAmount = selectedDeliveryOption?.amountRub ?? 0;
+  const deliveryAmount = selectedDeliveryOption.amountRub;
   const totalWithDelivery = total + deliveryAmount;
+  const isPhoneRequired = deliveryMode === 'ozon'
+    || deliveryMode === 'yandex'
+    || (deliveryMode === 'russian_post' && postDeliveryMethod === 'phone');
+  const isPostalAddressRequired = deliveryMode === 'russian_post' && postDeliveryMethod === 'address';
+  const isPickupAddressRequired = deliveryMode === 'ozon' || deliveryMode === 'yandex';
 
   useEffect(() => {
     try {
@@ -227,7 +230,8 @@ export function Checkout() {
         JSON.stringify({
           email,
           name,
-          contact,
+          phone,
+          telegram,
           comment,
           deliveryMode,
           destinationPostalCode,
@@ -238,7 +242,7 @@ export function Checkout() {
     } catch {
       // Ignore storage errors (private mode / quota), checkout should still work.
     }
-  }, [comment, contact, deliveryMode, destinationAddress, destinationPostalCode, email, name, postDeliveryMethod]);
+  }, [comment, deliveryMode, destinationAddress, destinationPostalCode, email, name, phone, postDeliveryMethod, telegram]);
 
   const handleOnlinePayment = async () => {
     if (cartItems.length === 0 || isSubmitting) return;
@@ -251,47 +255,32 @@ export function Checkout() {
       return;
     }
 
-    const normalizedContact = contact.trim();
+    const normalizedPhone = phone.trim();
+    const normalizedTelegram = telegram.trim();
     const normalizedAddress = destinationAddress.trim();
     const normalizedPostalCode = destinationPostalCode.trim();
 
-    if (deliveryMode !== 'manual_confirmation') {
-      if (!selectedDeliveryOption) {
-        toast.error('Не выбран способ доставки', {
-          description: 'Выбери способ доставки перед оплатой.',
+    if (isPhoneRequired && !isLikelyPhone(normalizedPhone)) {
+      toast.error('Нужен номер телефона', {
+        description: 'Для выбранного способа доставки укажи корректный номер телефона.',
+      });
+      return;
+    }
+
+    if (isPostalAddressRequired) {
+      if (!isValidPostalCode(normalizedPostalCode) || !normalizedAddress) {
+        toast.error('Нужны индекс и адрес', {
+          description: 'Для Почты России по адресу укажи индекс из 6 цифр и адрес.',
         });
         return;
       }
+    }
 
-      if (deliveryMode === 'russian_post' && postDeliveryMethod === 'phone' && !isLikelyPhone(normalizedContact)) {
-        toast.error('Нужен номер телефона', {
-          description: 'Для Почты России (по номеру телефона) укажи корректный номер.',
-        });
-        return;
-      }
-
-      if (deliveryMode === 'russian_post' && postDeliveryMethod === 'address') {
-        if (!isValidPostalCode(normalizedPostalCode) || !normalizedAddress) {
-          toast.error('Нужны индекс и адрес', {
-            description: 'Для Почты России по адресу укажи индекс из 6 цифр и адрес.',
-          });
-          return;
-        }
-      }
-
-      if ((deliveryMode === 'ozon' || deliveryMode === 'yandex') && !isLikelyPhone(normalizedContact)) {
-        toast.error('Нужен номер телефона', {
-          description: 'Для Ozon и Яндекс доставки укажи корректный номер телефона.',
-        });
-        return;
-      }
-
-      if ((deliveryMode === 'ozon' || deliveryMode === 'yandex') && !normalizedAddress) {
-        toast.error('Нужен адрес пункта выдачи', {
-          description: 'Для Ozon и Яндекс доставки укажи адрес ПВЗ.',
-        });
-        return;
-      }
+    if (isPickupAddressRequired && !normalizedAddress) {
+      toast.error('Нужен адрес пункта выдачи', {
+        description: 'Для Ozon и Яндекс доставки укажи адрес ПВЗ.',
+      });
+      return;
     }
 
     setIsSubmitting(true);
@@ -311,27 +300,27 @@ export function Checkout() {
           customer: {
             email: normalizedEmail,
             name: name.trim() || undefined,
-            contact: normalizedContact || undefined,
+            phone: normalizedPhone || undefined,
+            telegram: normalizedTelegram || undefined,
+            contact: normalizedPhone || normalizedTelegram || undefined,
             comment: comment.trim() || undefined,
             deliveryMode,
-            delivery: deliveryMode === 'manual_confirmation'
-              ? undefined
-              : {
-                mode: deliveryMode,
-                destinationPostalCode:
-                  deliveryMode === 'russian_post' && postDeliveryMethod === 'address'
-                    ? normalizedPostalCode
-                    : undefined,
-                destinationAddress:
-                  deliveryMode === 'russian_post' && postDeliveryMethod === 'phone'
-                    ? undefined
-                    : normalizedAddress || undefined,
-                optionCode: selectedDeliveryOption?.optionCode ?? '',
-                optionLabel: selectedDeliveryOption?.optionLabel ?? '',
-                amountRub: selectedDeliveryOption?.amountRub ?? 0,
-                etaMinDays: selectedDeliveryOption?.etaMinDays ?? 0,
-                etaMaxDays: selectedDeliveryOption?.etaMaxDays ?? 0,
-              },
+            delivery: {
+              mode: deliveryMode,
+              destinationPostalCode:
+                deliveryMode === 'russian_post' && postDeliveryMethod === 'address'
+                  ? normalizedPostalCode
+                  : undefined,
+              destinationAddress:
+                deliveryMode === 'russian_post' && postDeliveryMethod === 'phone'
+                  ? undefined
+                  : normalizedAddress || undefined,
+              optionCode: selectedDeliveryOption.optionCode,
+              optionLabel: selectedDeliveryOption.optionLabel,
+              amountRub: selectedDeliveryOption.amountRub,
+              etaMinDays: selectedDeliveryOption.etaMinDays,
+              etaMaxDays: selectedDeliveryOption.etaMaxDays,
+            },
           },
         }),
       });
@@ -421,15 +410,27 @@ export function Checkout() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <label htmlFor="checkout-contact" className="text-sm font-medium">Телефон / Telegram</label>
+                  <label htmlFor="checkout-phone" className="text-sm font-medium">
+                    Телефон {isPhoneRequired && <span className="text-destructive">*</span>}
+                  </label>
                   <Input
-                    id="checkout-contact"
-                    value={contact}
-                    onChange={(event) => setContact(event.target.value)}
-                    placeholder="@username или +7..."
+                    id="checkout-phone"
+                    value={phone}
+                    onChange={(event) => setPhone(event.target.value)}
+                    placeholder="+7..."
                     autoComplete="tel"
                   />
                 </div>
+              </div>
+              <div className="space-y-2">
+                <label htmlFor="checkout-telegram" className="text-sm font-medium">Telegram</label>
+                <Input
+                  id="checkout-telegram"
+                  value={telegram}
+                  onChange={(event) => setTelegram(event.target.value)}
+                  placeholder="@username"
+                  autoComplete="off"
+                />
               </div>
             </section>
 
@@ -455,85 +456,83 @@ export function Checkout() {
                 </select>
               </div>
 
-              {deliveryMode !== 'manual_confirmation' && (
-                <div className="space-y-3 rounded-2xl border border-border/70 p-4">
-                  {deliveryMode === 'russian_post' && (
-                    <div className="space-y-2">
-                      <label htmlFor="checkout-post-method" className="text-sm font-medium">Вариант Почты России</label>
-                      <select
-                        id="checkout-post-method"
-                        value={postDeliveryMethod}
-                        onChange={(event) => setPostDeliveryMethod(event.target.value as PostDeliveryMethod)}
-                        className="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                      >
-                        <option value="phone">По номеру телефона</option>
-                        <option value="address">По индексу и адресу</option>
-                      </select>
-                    </div>
-                  )}
-
-                  <div className={`rounded-xl border px-3 py-2 text-sm ${getDeliveryToneClass(deliveryMode)}`}>
-                    <p className="font-medium">{selectedDeliveryOption?.optionLabel}</p>
-                    <p className="text-xs opacity-90">
-                      {formatDeliveryAmount(selectedDeliveryOption?.amountRub ?? 0)} • срок {selectedDeliveryOption?.etaMinDays}-{selectedDeliveryOption?.etaMaxDays} дн.
-                    </p>
+              <div className="space-y-3 rounded-2xl border border-border/70 p-4">
+                {deliveryMode === 'russian_post' && (
+                  <div className="space-y-2">
+                    <label htmlFor="checkout-post-method" className="text-sm font-medium">Вариант Почты России</label>
+                    <select
+                      id="checkout-post-method"
+                      value={postDeliveryMethod}
+                      onChange={(event) => setPostDeliveryMethod(event.target.value as PostDeliveryMethod)}
+                      className="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    >
+                      <option value="phone">По номеру телефона</option>
+                      <option value="address">По индексу и адресу</option>
+                    </select>
                   </div>
+                )}
 
-                  {deliveryMode === 'russian_post' && postDeliveryMethod === 'address' && (
-                    <>
-                      <div className="space-y-2">
-                        <label htmlFor="checkout-destination-postal-code" className="text-sm font-medium">
-                          Индекс <span className="text-destructive">*</span>
-                        </label>
-                        <Input
-                          id="checkout-destination-postal-code"
-                          inputMode="numeric"
-                          maxLength={6}
-                          value={destinationPostalCode}
-                          onChange={(event) => setDestinationPostalCode(event.target.value.replace(/[^\d]/g, '').slice(0, 6))}
-                          placeholder="101000"
-                          autoComplete="postal-code"
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <label htmlFor="checkout-destination-address" className="text-sm font-medium">
-                          Адрес <span className="text-destructive">*</span>
-                        </label>
-                        <Input
-                          id="checkout-destination-address"
-                          value={destinationAddress}
-                          onChange={(event) => setDestinationAddress(event.target.value)}
-                          placeholder="Улица, дом, квартира"
-                          autoComplete="street-address"
-                        />
-                      </div>
-                    </>
-                  )}
-
-                  {(deliveryMode === 'ozon' || deliveryMode === 'yandex') && (
-                    <div className="space-y-2">
-                      <label htmlFor="checkout-pickup-address" className="text-sm font-medium">
-                        Адрес пункта выдачи <span className="text-destructive">*</span>
-                      </label>
-                      <Input
-                        id="checkout-pickup-address"
-                        value={destinationAddress}
-                        onChange={(event) => setDestinationAddress(event.target.value)}
-                        placeholder="Адрес выбранного ПВЗ"
-                      />
-                    </div>
-                  )}
-
-                  {(deliveryMode === 'ozon' || deliveryMode === 'yandex' || (deliveryMode === 'russian_post' && postDeliveryMethod === 'phone')) && (
-                    <p className="text-xs text-muted-foreground">
-                      Для этого способа обязателен корректный номер телефона в поле «Телефон / Telegram».
-                    </p>
-                  )}
-                  <p className="text-xs text-muted-foreground">
-                    Бесплатная доставка при сумме товаров от 1700 ₽.
+                <div className={`rounded-xl border px-3 py-2 text-sm ${getDeliveryToneClass(deliveryMode)}`}>
+                  <p className="font-medium">{selectedDeliveryOption.optionLabel}</p>
+                  <p className="text-xs opacity-90">
+                    {formatDeliveryAmount(selectedDeliveryOption.amountRub)} • срок {selectedDeliveryOption.etaMinDays}-{selectedDeliveryOption.etaMaxDays} дн.
                   </p>
                 </div>
-              )}
+
+                {isPostalAddressRequired && (
+                  <>
+                    <div className="space-y-2">
+                      <label htmlFor="checkout-destination-postal-code" className="text-sm font-medium">
+                        Индекс <span className="text-destructive">*</span>
+                      </label>
+                      <Input
+                        id="checkout-destination-postal-code"
+                        inputMode="numeric"
+                        maxLength={6}
+                        value={destinationPostalCode}
+                        onChange={(event) => setDestinationPostalCode(event.target.value.replace(/[^\d]/g, '').slice(0, 6))}
+                        placeholder="101000"
+                        autoComplete="postal-code"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label htmlFor="checkout-destination-address" className="text-sm font-medium">
+                        Адрес <span className="text-destructive">*</span>
+                      </label>
+                      <Input
+                        id="checkout-destination-address"
+                        value={destinationAddress}
+                        onChange={(event) => setDestinationAddress(event.target.value)}
+                        placeholder="Улица, дом, квартира"
+                        autoComplete="street-address"
+                      />
+                    </div>
+                  </>
+                )}
+
+                {isPickupAddressRequired && (
+                  <div className="space-y-2">
+                    <label htmlFor="checkout-pickup-address" className="text-sm font-medium">
+                      Адрес пункта выдачи <span className="text-destructive">*</span>
+                    </label>
+                    <Input
+                      id="checkout-pickup-address"
+                      value={destinationAddress}
+                      onChange={(event) => setDestinationAddress(event.target.value)}
+                      placeholder="Адрес выбранного ПВЗ"
+                    />
+                  </div>
+                )}
+
+                {isPhoneRequired && (
+                  <p className="text-xs text-muted-foreground">
+                    Для этого способа обязателен корректный номер телефона в поле «Телефон».
+                  </p>
+                )}
+                <p className="text-xs text-muted-foreground">
+                  Бесплатная доставка при сумме товаров от 1700 ₽.
+                </p>
+              </div>
 
               <div className="space-y-2">
                 <label htmlFor="checkout-comment" className="text-sm font-medium">Комментарий к заказу</label>
@@ -606,22 +605,14 @@ export function Checkout() {
               </div>
               <div className="flex items-center justify-between text-sm text-muted-foreground">
                 <span>Доставка</span>
-                <span>
-                  {deliveryMode === 'manual_confirmation'
-                    ? 'уточним'
-                    : selectedDeliveryOption
-                      ? formatDeliveryAmount(selectedDeliveryOption.amountRub)
-                      : 'не выбрана'}
-                </span>
+                <span>{formatDeliveryAmount(selectedDeliveryOption.amountRub)}</span>
               </div>
               <div className="flex items-center justify-between text-lg font-semibold">
                 <span>Итого</span>
-                <span>{deliveryMode === 'manual_confirmation' ? `${total} ₽` : `${totalWithDelivery} ₽`}</span>
+                <span>{totalWithDelivery} ₽</span>
               </div>
               <p className="text-xs text-muted-foreground">
-                {deliveryMode === 'manual_confirmation'
-                  ? 'Стоимость доставки подтверждается отдельно в переписке.'
-                  : 'Стоимость доставки фиксируется в заказе перед оплатой. От 1700 ₽ доставка бесплатная.'}
+                Стоимость доставки фиксируется в заказе перед оплатой. От 1700 ₽ доставка бесплатная.
               </p>
             </div>
 
