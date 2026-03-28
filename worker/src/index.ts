@@ -31,8 +31,6 @@ type Env = {
   RESEND_FROM?: string;
   RESEND_REPLY_TO?: string;
   ORDERS_NOTIFICATION_EMAIL?: string;
-  CDEK_ORIGIN_POSTAL_CODE?: string;
-  POST_ORIGIN_POSTAL_CODE?: string;
 };
 
 type CreateCheckoutItem = {
@@ -40,7 +38,7 @@ type CreateCheckoutItem = {
   quantity: number;
 };
 
-type DeliveryMode = "manual_confirmation" | "russian_post" | "cdek";
+type DeliveryMode = "manual_confirmation" | "russian_post" | "cdek" | "ozon" | "yandex";
 type DeliveryProvider = Exclude<DeliveryMode, "manual_confirmation">;
 
 type DeliverySelectionPayload = {
@@ -239,15 +237,28 @@ const CATEGORY_SHIPPING_PROFILES: Record<string, ProductShippingProfile> = {
   other: { weightGrams: 200, lengthCm: 24, widthCm: 18, heightCm: 4 },
 };
 
+const FREE_DELIVERY_THRESHOLD_RUB = 1700;
+const FIXED_DELIVERY_RATES_RUB: Record<Exclude<DeliveryProvider, "cdek">, number> = {
+  russian_post: 400,
+  ozon: 300,
+  yandex: 300,
+};
+
 function normalizeDeliveryMode(value: string | undefined): DeliveryMode {
-  if (value === "cdek" || value === "russian_post" || value === "manual_confirmation") {
+  if (
+    value === "cdek"
+    || value === "russian_post"
+    || value === "ozon"
+    || value === "yandex"
+    || value === "manual_confirmation"
+  ) {
     return value;
   }
   return "manual_confirmation";
 }
 
 function isDeliveryProvider(value: string | undefined): value is DeliveryProvider {
-  return value === "cdek" || value === "russian_post";
+  return value === "cdek" || value === "russian_post" || value === "ozon" || value === "yandex";
 }
 
 function sanitizeText(value: string | undefined, maxLength = 120): string | undefined {
@@ -295,80 +306,53 @@ function buildShipmentMetrics(mergedItems: Map<number, number>): ShipmentMetrics
   };
 }
 
-function getDistanceTier(originPostalCode: string, destinationPostalCode: string): 0 | 1 | 2 {
-  if (originPostalCode === destinationPostalCode) return 0;
-  if (originPostalCode.slice(0, 2) === destinationPostalCode.slice(0, 2)) return 0;
-  if (originPostalCode.slice(0, 1) === destinationPostalCode.slice(0, 1)) return 1;
-  return 2;
-}
-
-function roundRub(value: number): number {
-  return Math.max(0, Math.round(value));
-}
-
 function buildEstimatedQuotes(args: {
-  env: Env;
   destinationCity?: string;
-  destinationPostalCode: string;
-  shipment: ShipmentMetrics;
+  subtotalRub: number;
   providers: DeliveryProvider[];
 }): DeliveryQuoteOption[] {
-  const { env, destinationCity, destinationPostalCode, shipment, providers } = args;
-  const cdekOrigin = env.CDEK_ORIGIN_POSTAL_CODE?.trim() || "101000";
-  const postOrigin = env.POST_ORIGIN_POSTAL_CODE?.trim() || "101000";
+  const { destinationCity, providers, subtotalRub } = args;
   const uniqueProviders = Array.from(new Set(providers));
-
-  const cdekTier = getDistanceTier(cdekOrigin, destinationPostalCode);
-  const postTier = getDistanceTier(postOrigin, destinationPostalCode);
-  const weightOverBase = Math.max(0, shipment.weightGrams - 250);
-  const weightUnits = Math.ceil(weightOverBase / 100);
-  const volumeFactor = Math.max(0, shipment.lengthCm * shipment.widthCm * shipment.heightCm - 2500) / 500;
+  const isFreeDelivery = subtotalRub >= FREE_DELIVERY_THRESHOLD_RUB;
 
   const options: DeliveryQuoteOption[] = [];
-
-  if (uniqueProviders.includes("cdek")) {
-    options.push({
-      mode: "cdek",
-      optionCode: "cdek_pickup_standard",
-      optionLabel: destinationCity
-        ? `СДЭК, пункт выдачи (${destinationCity})`
-        : "СДЭК, пункт выдачи",
-      amountRub: roundRub(240 + cdekTier * 120 + weightUnits * 10 + volumeFactor * 6),
-      etaMinDays: 2 + cdekTier,
-      etaMaxDays: 4 + cdekTier * 2,
-    });
-    options.push({
-      mode: "cdek",
-      optionCode: "cdek_courier_standard",
-      optionLabel: destinationCity
-        ? `СДЭК, курьер (${destinationCity})`
-        : "СДЭК, курьер",
-      amountRub: roundRub(360 + cdekTier * 140 + weightUnits * 12 + volumeFactor * 8),
-      etaMinDays: 1 + cdekTier,
-      etaMaxDays: 3 + cdekTier * 2,
-    });
-  }
 
   if (uniqueProviders.includes("russian_post")) {
     options.push({
       mode: "russian_post",
-      optionCode: "post_office_parcel",
+      optionCode: "post_standard",
       optionLabel: destinationCity
-        ? `Почта России, отделение (${destinationCity})`
-        : "Почта России, отделение",
-      amountRub: roundRub(210 + postTier * 105 + weightUnits * 8 + volumeFactor * 5),
-      etaMinDays: 3 + postTier,
-      etaMaxDays: 6 + postTier * 2,
+        ? `Почта России (${destinationCity})`
+        : "Почта России",
+      amountRub: isFreeDelivery ? 0 : FIXED_DELIVERY_RATES_RUB.russian_post,
+      etaMinDays: 4,
+      etaMaxDays: 10,
     });
+  }
+
+  if (uniqueProviders.includes("yandex")) {
     options.push({
-      mode: "russian_post",
-      optionCode: "post_courier_ems",
+      mode: "yandex",
+      optionCode: "yandex_standard",
       optionLabel: destinationCity
-        ? `Почта России EMS (${destinationCity})`
-        : "Почта России EMS",
-      amountRub: roundRub(390 + postTier * 135 + weightUnits * 11 + volumeFactor * 7),
-      etaMinDays: 2 + postTier,
-      etaMaxDays: 5 + postTier * 2,
+        ? `Яндекс Доставка (${destinationCity})`
+        : "Яндекс Доставка",
+      amountRub: isFreeDelivery ? 0 : FIXED_DELIVERY_RATES_RUB.yandex,
+      etaMinDays: 2,
+      etaMaxDays: 7,
+    });
+  }
+
+  if (uniqueProviders.includes("ozon")) {
+    options.push({
+      mode: "ozon",
+      optionCode: "ozon_standard",
+      optionLabel: destinationCity
+        ? `Ozon Доставка (${destinationCity})`
+        : "Ozon Доставка",
+      amountRub: isFreeDelivery ? 0 : FIXED_DELIVERY_RATES_RUB.ozon,
+      etaMinDays: 2,
+      etaMaxDays: 7,
     });
   }
 
@@ -478,6 +462,8 @@ function formatDeliveryMode(mode: string | undefined): string {
   if (mode === "manual_confirmation") return "Уточнение после оплаты";
   if (mode === "russian_post") return "Почта России";
   if (mode === "cdek") return "СДЭК";
+  if (mode === "ozon") return "Ozon Доставка";
+  if (mode === "yandex") return "Яндекс Доставка";
   return mode;
 }
 
@@ -1408,7 +1394,7 @@ async function handleDeliveryQuotes(request: Request, env: Env): Promise<Respons
 
   const providers = Array.isArray(payload.providers) && payload.providers.length > 0
     ? payload.providers.filter((provider): provider is DeliveryProvider => isDeliveryProvider(provider))
-    : ["cdek", "russian_post"];
+    : ["russian_post", "ozon", "yandex"];
 
   if (providers.length === 0) {
     return badRequest(request, env, "Нужно выбрать хотя бы одну службу доставки");
@@ -1416,10 +1402,8 @@ async function handleDeliveryQuotes(request: Request, env: Env): Promise<Respons
 
   const shipment = buildShipmentMetrics(merged);
   const options = buildEstimatedQuotes({
-    env,
     destinationCity,
-    destinationPostalCode,
-    shipment,
+    subtotalRub,
     providers,
   }).sort((a, b) => a.amountRub - b.amountRub);
 
@@ -1431,7 +1415,7 @@ async function handleDeliveryQuotes(request: Request, env: Env): Promise<Respons
     shipment,
     subtotalRub,
     options,
-    note: "Расчет на основе интеграционного тарификатора (СДЭК/Почта), финальная стоимость фиксируется в заказе.",
+    note: "Фиксированные тарифы: Почта России — 400 ₽, Ozon и Яндекс — 300 ₽. Бесплатная доставка от 1700 ₽.",
   });
 }
 
@@ -1499,6 +1483,7 @@ async function handleCreateCheckout(request: Request, env: Env, executionContext
   if (totalKopecks <= 0) {
     return badRequest(request, env, "Сумма заказа должна быть больше нуля");
   }
+  const subtotalRub = totalKopecks / 100;
 
   let selectedDelivery: OrderCustomerDelivery | undefined;
   if (isDeliveryProvider(requestedDeliveryMode)) {
@@ -1513,12 +1498,9 @@ async function handleCreateCheckout(request: Request, env: Env, executionContext
       return badRequest(request, env, "Выберите тариф доставки");
     }
 
-    const shipment = buildShipmentMetrics(merged);
     const availableOptions = buildEstimatedQuotes({
-      env,
       destinationCity,
-      destinationPostalCode,
-      shipment,
+      subtotalRub,
       providers: [requestedDeliveryMode],
     });
 

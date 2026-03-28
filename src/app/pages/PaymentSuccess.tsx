@@ -22,7 +22,7 @@ type CheckoutStatus = {
     lineTotal: number;
   }>;
   delivery: {
-    mode: "cdek" | "russian_post";
+    mode: "cdek" | "russian_post" | "ozon" | "yandex";
     label: string;
     amountRub: number;
     destinationCity: string | null;
@@ -38,6 +38,17 @@ type ViewState = "loading" | "pending" | "paid" | "missing" | "error";
 const POLL_INTERVAL_MS = 3000;
 const MAX_POLL_ATTEMPTS = 12;
 const CHECKOUT_DRAFT_STORAGE_KEY = "checkoutDraft";
+
+function formatDeliveryAmount(amountRub: number): string {
+  return amountRub <= 0 ? "бесплатно" : `${amountRub} ₽`;
+}
+
+function normalizeDeliveryMode(value: unknown): "cdek" | "russian_post" | "ozon" | "yandex" {
+  if (value === "cdek" || value === "russian_post" || value === "ozon" || value === "yandex") {
+    return value;
+  }
+  return "russian_post";
+}
 
 async function parseJsonResponse<T>(response: Response): Promise<T> {
   const raw = await response.text();
@@ -118,7 +129,7 @@ export function PaymentSuccess() {
           })).filter((item) => item.name && item.quantity > 0) : [],
           delivery: data.delivery
             ? {
-              mode: data.delivery.mode === "cdek" ? "cdek" : "russian_post",
+              mode: normalizeDeliveryMode(data.delivery.mode),
               label: String(data.delivery.label ?? ""),
               amountRub: Number(data.delivery.amountRub ?? 0),
               destinationCity: data.delivery.destinationCity ? String(data.delivery.destinationCity) : null,
@@ -261,7 +272,7 @@ function OrderSummary({ statusData }: { statusData: CheckoutStatus }) {
         <div className="space-y-1 rounded-xl bg-muted/40 p-3">
           <p className="text-sm font-medium">Доставка</p>
           <p className="text-sm text-muted-foreground">
-            {statusData.delivery.label} • {statusData.delivery.amountRub} ₽
+            {statusData.delivery.label} • {formatDeliveryAmount(statusData.delivery.amountRub)}
           </p>
           <p className="text-sm text-muted-foreground">
             {statusData.delivery.destinationCity ? `${statusData.delivery.destinationCity}, ` : ""}

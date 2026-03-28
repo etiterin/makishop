@@ -1,5 +1,5 @@
 import { motion } from 'motion/react';
-import { Truck, Package, CreditCard, Mail } from 'lucide-react';
+import { Truck, Package, CreditCard } from 'lucide-react';
 
 export function Delivery() {
   return (
@@ -21,55 +21,32 @@ export function Delivery() {
         </motion.div>
 
         <div className="space-y-12">
-          {/* Letters Section */}
+          {/* Delivery Rates Section */}
           <motion.div
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.2 }}
-            className="p-8 bg-card rounded-3xl shadow-sm"
-          >
-            <div className="flex items-center gap-4 mb-6">
-              <Mail className="w-8 h-8 text-accent-foreground" />
-              <div>
-                <h2 className="text-2xl sm:text-3xl">Письма</h2>
-                <p className="text-muted-foreground">Для стикеров и прочей печатной продукции.</p>
-              </div>
-            </div>
-            <div className="space-y-4">
-              <div className="bg-accent/10 text-accent-foreground p-4 rounded-xl font-medium">
-                Бесплатная доставка от 1000 ₽
-              </div>
-              <ul className="space-y-3 text-lg">
-                <li className="flex justify-between"><span>🦊 Почта России (с трек-номером)</span> <span>300 ₽</span></li>
-                <li className="flex justify-between"><span>🦊 Яндекс-доставка</span> <span>200 ₽</span></li>
-                <li className="flex justify-between"><span>🦊 Озон-доставка</span> <span>200 ₽</span></li>
-              </ul>
-            </div>
-          </motion.div>
-
-          {/* Parcels Section */}
-          <motion.div
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.5, delay: 0.4 }}
             className="p-8 bg-card rounded-3xl shadow-sm"
           >
             <div className="flex items-center gap-4 mb-6">
               <Package className="w-8 h-8 text-accent-foreground" />
               <div>
-                <h2 className="text-2xl sm:text-3xl">Посылки</h2>
-                <p className="text-muted-foreground">Для брелоков, шоперов и не-печатной продукции.</p>
+                <h2 className="text-2xl sm:text-3xl">Способы доставки</h2>
+                <p className="text-muted-foreground">Единые тарифы для заказов по России.</p>
               </div>
             </div>
             <div className="space-y-4">
               <div className="bg-accent/10 text-accent-foreground p-4 rounded-xl font-medium">
-                Бесплатная доставка от 2000 ₽
+                Бесплатная доставка от 1700 ₽
               </div>
               <ul className="space-y-3 text-lg">
-                <li className="flex justify-between"><span>🦊 Почта России (с трек-номером)</span> <span>400 ₽</span></li>
-                <li className="flex justify-between"><span>🦊 Яндекс-доставка</span> <span>300 ₽</span></li>
-                <li className="flex justify-between"><span>🦊 Озон-доставка</span> <span>300 ₽</span></li>
+                <li className="flex justify-between"><span>🦊 Почта России</span> <span>400 ₽</span></li>
+                <li className="flex justify-between"><span>🦊 Яндекс Доставка</span> <span>300 ₽</span></li>
+                <li className="flex justify-between"><span>🦊 Ozon Доставка</span> <span>300 ₽</span></li>
               </ul>
+              <p className="text-sm text-muted-foreground">
+                Стоимость фиксируется на этапе оформления перед оплатой.
+              </p>
             </div>
           </motion.div>
 

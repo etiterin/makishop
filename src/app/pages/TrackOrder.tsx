@@ -28,7 +28,7 @@ type TrackOrderResponse = {
     lineTotal: number;
   }>;
   delivery: {
-    mode: 'cdek' | 'russian_post';
+    mode: 'cdek' | 'russian_post' | 'ozon' | 'yandex';
     label: string;
     amountRub: number;
     destinationCity: string | null;
@@ -62,6 +62,17 @@ const STATUS_LABELS: Record<FulfillmentStatus, string> = {
   completed: 'Завершен',
   canceled: 'Отменен',
 };
+
+function formatDeliveryAmount(amountRub: number): string {
+  return amountRub <= 0 ? 'бесплатно' : `${amountRub} ₽`;
+}
+
+function normalizeDeliveryMode(value: unknown): 'cdek' | 'russian_post' | 'ozon' | 'yandex' {
+  if (value === 'cdek' || value === 'russian_post' || value === 'ozon' || value === 'yandex') {
+    return value;
+  }
+  return 'russian_post';
+}
 
 async function parseJsonResponse<T>(response: Response): Promise<T> {
   const raw = await response.text();
@@ -145,7 +156,7 @@ export function TrackOrder() {
           : [],
         delivery: data.delivery
           ? {
-            mode: data.delivery.mode === 'cdek' ? 'cdek' : 'russian_post',
+            mode: normalizeDeliveryMode(data.delivery.mode),
             label: String(data.delivery.label ?? ''),
             amountRub: Number(data.delivery.amountRub ?? 0),
             destinationCity: data.delivery.destinationCity ? String(data.delivery.destinationCity) : null,
@@ -311,7 +322,7 @@ export function TrackOrder() {
               <div className="space-y-1 rounded-2xl border border-border/60 p-4">
                 <p className="font-medium">Доставка</p>
                 <p className="text-sm text-muted-foreground">
-                  {statusData.delivery.label} • {statusData.delivery.amountRub} ₽
+                  {statusData.delivery.label} • {formatDeliveryAmount(statusData.delivery.amountRub)}
                 </p>
                 <p className="text-sm text-muted-foreground">
                   {statusData.delivery.destinationCity ? `${statusData.delivery.destinationCity}, ` : ''}

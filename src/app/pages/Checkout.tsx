@@ -14,7 +14,7 @@ type CreateCheckoutResponse = {
   statusToken: string;
 };
 
-type DeliveryMode = 'manual_confirmation' | 'russian_post' | 'cdek';
+type DeliveryMode = 'manual_confirmation' | 'russian_post' | 'ozon' | 'yandex';
 type DeliveryProvider = Exclude<DeliveryMode, 'manual_confirmation'>;
 
 type DeliveryQuoteOption = {
@@ -58,8 +58,13 @@ const DELIVERY_OPTIONS: Array<{
     description: 'Расчет стоимости по индексу и выбор тарифа до оплаты.',
   },
   {
-    value: 'cdek',
-    label: 'СДЭК',
+    value: 'ozon',
+    label: 'Ozon Доставка',
+    description: 'Расчет стоимости по индексу и выбор тарифа до оплаты.',
+  },
+  {
+    value: 'yandex',
+    label: 'Яндекс Доставка',
     description: 'Расчет стоимости по индексу и выбор тарифа до оплаты.',
   },
 ];
@@ -70,6 +75,10 @@ function isValidEmail(value: string): boolean {
 
 function isValidPostalCode(value: string): boolean {
   return /^\d{6}$/.test(value.trim());
+}
+
+function formatDeliveryAmount(amountRub: number): string {
+  return amountRub <= 0 ? 'бесплатно' : `${amountRub} ₽`;
 }
 
 async function parseJsonResponse<T>(response: Response): Promise<T> {
@@ -94,7 +103,9 @@ function getCheckoutDraft(): CheckoutDraft | null {
 
     const parsed = JSON.parse(raw) as Partial<CheckoutDraft>;
     const deliveryMode: DeliveryMode =
-      parsed.deliveryMode === 'russian_post' || parsed.deliveryMode === 'cdek'
+      parsed.deliveryMode === 'russian_post'
+      || parsed.deliveryMode === 'ozon'
+      || parsed.deliveryMode === 'yandex'
         ? parsed.deliveryMode
         : 'manual_confirmation';
 
@@ -262,7 +273,7 @@ export function Checkout() {
       const normalizedPostalCode = destinationPostalCode.trim();
       if (!isValidPostalCode(normalizedPostalCode)) {
         toast.error('Нужен индекс доставки', {
-          description: 'Для СДЭК и Почты России укажи индекс из 6 цифр.',
+          description: 'Для выбранной службы доставки укажи индекс из 6 цифр.',
         });
         return;
       }
@@ -516,13 +527,16 @@ export function Checkout() {
                                   Срок: {option.etaMinDays}-{option.etaMaxDays} дн.
                                 </p>
                               </div>
-                              <p className="text-sm font-semibold whitespace-nowrap">{option.amountRub} ₽</p>
+                              <p className="text-sm font-semibold whitespace-nowrap">{formatDeliveryAmount(option.amountRub)}</p>
                             </div>
                           </button>
                         );
                       })}
                     </div>
                   )}
+                  <p className="text-xs text-muted-foreground">
+                    Бесплатная доставка при сумме товаров от 1700 ₽.
+                  </p>
                 </div>
               )}
 
@@ -601,7 +615,7 @@ export function Checkout() {
                   {deliveryMode === 'manual_confirmation'
                     ? 'уточним'
                     : selectedDeliveryOption
-                      ? `${selectedDeliveryOption.amountRub} ₽`
+                      ? formatDeliveryAmount(selectedDeliveryOption.amountRub)
                       : 'не выбрана'}
                 </span>
               </div>
@@ -612,7 +626,7 @@ export function Checkout() {
               <p className="text-xs text-muted-foreground">
                 {deliveryMode === 'manual_confirmation'
                   ? 'Стоимость доставки подтверждается отдельно в переписке.'
-                  : 'Стоимость доставки фиксируется в заказе перед оплатой.'}
+                  : 'Стоимость доставки фиксируется в заказе перед оплатой. От 1700 ₽ доставка бесплатная.'}
               </p>
             </div>
 
