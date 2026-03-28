@@ -32,7 +32,8 @@ type TrackOrderResponse = {
     label: string;
     amountRub: number;
     destinationCity: string | null;
-    destinationPostalCode: string;
+    destinationPostalCode: string | null;
+    destinationAddress: string | null;
     etaMinDays: number;
     etaMaxDays: number;
   } | null;
@@ -160,7 +161,8 @@ export function TrackOrder() {
             label: String(data.delivery.label ?? ''),
             amountRub: Number(data.delivery.amountRub ?? 0),
             destinationCity: data.delivery.destinationCity ? String(data.delivery.destinationCity) : null,
-            destinationPostalCode: String(data.delivery.destinationPostalCode ?? ''),
+            destinationPostalCode: data.delivery.destinationPostalCode ? String(data.delivery.destinationPostalCode) : null,
+            destinationAddress: data.delivery.destinationAddress ? String(data.delivery.destinationAddress) : null,
             etaMinDays: Number(data.delivery.etaMinDays ?? 0),
             etaMaxDays: Number(data.delivery.etaMaxDays ?? 0),
           }
@@ -325,8 +327,9 @@ export function TrackOrder() {
                   {statusData.delivery.label} • {formatDeliveryAmount(statusData.delivery.amountRub)}
                 </p>
                 <p className="text-sm text-muted-foreground">
-                  {statusData.delivery.destinationCity ? `${statusData.delivery.destinationCity}, ` : ''}
-                  {statusData.delivery.destinationPostalCode}
+                  {statusData.delivery.destinationAddress
+                    ? statusData.delivery.destinationAddress
+                    : `${statusData.delivery.destinationCity ? `${statusData.delivery.destinationCity}, ` : ''}${statusData.delivery.destinationPostalCode ?? ''}`}
                 </p>
                 <p className="text-sm text-muted-foreground">
                   Ориентировочный срок: {statusData.delivery.etaMinDays}-{statusData.delivery.etaMaxDays} дн.

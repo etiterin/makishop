@@ -45,6 +45,7 @@ type DeliverySelectionPayload = {
   mode?: string;
   destinationCity?: string;
   destinationPostalCode?: string;
+  destinationAddress?: string;
   optionCode?: string;
   optionLabel?: string;
   amountRub?: number;
@@ -182,7 +183,8 @@ type OrderLineItem = {
 type OrderCustomerDelivery = {
   mode: DeliveryProvider;
   destinationCity?: string;
-  destinationPostalCode: string;
+  destinationPostalCode?: string;
+  destinationAddress?: string;
   optionCode: string;
   optionLabel: string;
   amountRub: number;
@@ -320,10 +322,20 @@ function buildEstimatedQuotes(args: {
   if (uniqueProviders.includes("russian_post")) {
     options.push({
       mode: "russian_post",
-      optionCode: "post_standard",
+      optionCode: "post_phone",
       optionLabel: destinationCity
-        ? `Почта России (${destinationCity})`
-        : "Почта России",
+        ? `Почта России, по номеру телефона (${destinationCity})`
+        : "Почта России, по номеру телефона",
+      amountRub: isFreeDelivery ? 0 : FIXED_DELIVERY_RATES_RUB.russian_post,
+      etaMinDays: 4,
+      etaMaxDays: 10,
+    });
+    options.push({
+      mode: "russian_post",
+      optionCode: "post_address",
+      optionLabel: destinationCity
+        ? `Почта России, по индексу и адресу (${destinationCity})`
+        : "Почта России, по индексу и адресу",
       amountRub: isFreeDelivery ? 0 : FIXED_DELIVERY_RATES_RUB.russian_post,
       etaMinDays: 4,
       etaMaxDays: 10,
@@ -333,10 +345,10 @@ function buildEstimatedQuotes(args: {
   if (uniqueProviders.includes("yandex")) {
     options.push({
       mode: "yandex",
-      optionCode: "yandex_standard",
+      optionCode: "yandex_pickup",
       optionLabel: destinationCity
-        ? `Яндекс Доставка (${destinationCity})`
-        : "Яндекс Доставка",
+        ? `Яндекс Доставка, пункт выдачи (${destinationCity})`
+        : "Яндекс Доставка, пункт выдачи",
       amountRub: isFreeDelivery ? 0 : FIXED_DELIVERY_RATES_RUB.yandex,
       etaMinDays: 2,
       etaMaxDays: 7,
@@ -346,10 +358,10 @@ function buildEstimatedQuotes(args: {
   if (uniqueProviders.includes("ozon")) {
     options.push({
       mode: "ozon",
-      optionCode: "ozon_standard",
+      optionCode: "ozon_pickup",
       optionLabel: destinationCity
-        ? `Ozon Доставка (${destinationCity})`
-        : "Ozon Доставка",
+        ? `Ozon Доставка, пункт выдачи (${destinationCity})`
+        : "Ozon Доставка, пункт выдачи",
       amountRub: isFreeDelivery ? 0 : FIXED_DELIVERY_RATES_RUB.ozon,
       etaMinDays: 2,
       etaMaxDays: 7,
@@ -385,6 +397,12 @@ function isValidEmail(value: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
 }
 
+function isLikelyPhone(value: string | undefined): boolean {
+  if (!value) return false;
+  const digits = value.replace(/\D/g, "");
+  return digits.length >= 10;
+}
+
 function parseJsonObject<T>(raw: string | null): T | null {
   if (!raw) return null;
   try {
@@ -405,14 +423,21 @@ function parseCustomer(raw: string | null): OrderCustomer | null {
     const mode = rawDelivery.mode;
     const optionCode = typeof rawDelivery.optionCode === "string" ? rawDelivery.optionCode : "";
     const optionLabel = typeof rawDelivery.optionLabel === "string" ? rawDelivery.optionLabel : "";
-    const destinationPostalCode = typeof rawDelivery.destinationPostalCode === "string"
-      ? rawDelivery.destinationPostalCode
+    const destinationPostalCodeRaw = typeof rawDelivery.destinationPostalCode === "string"
+      ? rawDelivery.destinationPostalCode.trim()
       : "";
+    const destinationPostalCode = isValidRussianPostalCode(destinationPostalCodeRaw)
+      ? destinationPostalCodeRaw
+      : undefined;
+    const destinationAddress = sanitizeText(
+      typeof rawDelivery.destinationAddress === "string" ? rawDelivery.destinationAddress : undefined,
+      200,
+    );
     const amountRub = Number(rawDelivery.amountRub ?? NaN);
     const etaMinDays = Number(rawDelivery.etaMinDays ?? NaN);
     const etaMaxDays = Number(rawDelivery.etaMaxDays ?? NaN);
 
-    if (isDeliveryProvider(mode) && optionCode && optionLabel && isValidRussianPostalCode(destinationPostalCode)
+    if (isDeliveryProvider(mode) && optionCode && optionLabel
       && Number.isFinite(amountRub) && amountRub >= 0
       && Number.isFinite(etaMinDays) && etaMinDays >= 0
       && Number.isFinite(etaMaxDays) && etaMaxDays >= etaMinDays) {
@@ -421,6 +446,7 @@ function parseCustomer(raw: string | null): OrderCustomer | null {
         optionCode,
         optionLabel,
         destinationPostalCode,
+        destinationAddress,
         destinationCity: sanitizeText(
           typeof rawDelivery.destinationCity === "string" ? rawDelivery.destinationCity : undefined,
           80,
@@ -474,6 +500,7 @@ function formatDeliverySummary(customer: OrderCustomer | null): string {
   }
 
   const destinationParts = [
+    customer.delivery.destinationAddress,
     customer.delivery.destinationCity,
     customer.delivery.destinationPostalCode,
   ].filter(Boolean);
@@ -748,6 +775,9 @@ function buildOrderEmailHtml(args: {
   }
   if (customer?.delivery?.destinationPostalCode) {
     customerBlocks.push(`<p class="item-name" style="margin: 4px 0 0; color: #1f2937; font-size: 14px;">Индекс доставки: ${escapeHtml(customer.delivery.destinationPostalCode)}</p>`);
+  }
+  if (customer?.delivery?.destinationAddress) {
+    customerBlocks.push(`<p class="item-name" style="margin: 4px 0 0; color: #1f2937; font-size: 14px;">Адрес доставки/ПВЗ: ${escapeHtml(customer.delivery.destinationAddress)}</p>`);
   }
 
   const customerDetails = customerBlocks.length > 0
@@ -1366,8 +1396,8 @@ async function handleDeliveryQuotes(request: Request, env: Env): Promise<Respons
   }
 
   const destinationPostalCode = payload.destination?.postalCode?.trim();
-  if (!isValidRussianPostalCode(destinationPostalCode)) {
-    return badRequest(request, env, "Укажите индекс доставки (6 цифр)");
+  if (destinationPostalCode && !isValidRussianPostalCode(destinationPostalCode)) {
+    return badRequest(request, env, "Индекс должен состоять из 6 цифр");
   }
 
   const destinationCity = sanitizeText(payload.destination?.city, 80);
@@ -1410,7 +1440,7 @@ async function handleDeliveryQuotes(request: Request, env: Env): Promise<Respons
   return jsonResponse(request, env, {
     destination: {
       city: destinationCity ?? null,
-      postalCode: destinationPostalCode,
+      postalCode: destinationPostalCode ?? null,
     },
     shipment,
     subtotalRub,
@@ -1484,15 +1514,16 @@ async function handleCreateCheckout(request: Request, env: Env, executionContext
     return badRequest(request, env, "Сумма заказа должна быть больше нуля");
   }
   const subtotalRub = totalKopecks / 100;
+  const normalizedContact = sanitizeText(payload.customer?.contact, 80);
 
   let selectedDelivery: OrderCustomerDelivery | undefined;
   if (isDeliveryProvider(requestedDeliveryMode)) {
-    const destinationPostalCode = payload.customer?.delivery?.destinationPostalCode?.trim() ?? "";
-    if (!isValidRussianPostalCode(destinationPostalCode)) {
-      return badRequest(request, env, "Для доставки нужен корректный индекс (6 цифр)");
-    }
-
     const destinationCity = sanitizeText(payload.customer?.delivery?.destinationCity, 80);
+    const destinationPostalCodeRaw = payload.customer?.delivery?.destinationPostalCode?.trim();
+    const destinationPostalCode = isValidRussianPostalCode(destinationPostalCodeRaw)
+      ? destinationPostalCodeRaw
+      : undefined;
+    const destinationAddress = sanitizeText(payload.customer?.delivery?.destinationAddress, 200);
     const quoteOptionCode = payload.customer?.delivery?.optionCode?.trim();
     if (!quoteOptionCode) {
       return badRequest(request, env, "Выберите тариф доставки");
@@ -1509,11 +1540,29 @@ async function handleCreateCheckout(request: Request, env: Env, executionContext
       return badRequest(request, env, "Выбранный тариф доставки устарел, пересчитайте доставку");
     }
 
+    if (requestedDeliveryMode === "russian_post") {
+      if (selectedOption.optionCode === "post_phone" && !isLikelyPhone(normalizedContact)) {
+        return badRequest(request, env, "Для Почты России (по телефону) укажите корректный номер телефона");
+      }
+      if (selectedOption.optionCode === "post_address" && (!destinationPostalCode || !destinationAddress)) {
+        return badRequest(request, env, "Для Почты России по адресу нужны индекс (6 цифр) и адрес");
+      }
+    }
+
+    if ((requestedDeliveryMode === "ozon" || requestedDeliveryMode === "yandex") && !isLikelyPhone(normalizedContact)) {
+      return badRequest(request, env, "Для Ozon и Яндекс доставки нужен корректный номер телефона");
+    }
+
+    if ((requestedDeliveryMode === "ozon" || requestedDeliveryMode === "yandex") && !destinationAddress) {
+      return badRequest(request, env, "Для Ozon и Яндекс доставки укажите адрес пункта выдачи");
+    }
+
     totalKopecks += toKopecks(selectedOption.amountRub);
     selectedDelivery = {
       mode: selectedOption.mode,
       destinationCity,
       destinationPostalCode,
+      destinationAddress,
       optionCode: selectedOption.optionCode,
       optionLabel: selectedOption.optionLabel,
       amountRub: selectedOption.amountRub,
@@ -1525,7 +1574,7 @@ async function handleCreateCheckout(request: Request, env: Env, executionContext
   const normalizedCustomer: OrderCustomer = {
     email: normalizedEmail,
     name: sanitizeText(payload.customer?.name, 80),
-    contact: sanitizeText(payload.customer?.contact, 80),
+    contact: normalizedContact,
     comment: sanitizeText(payload.customer?.comment, 500),
     deliveryMode: requestedDeliveryMode,
     delivery: selectedDelivery,
@@ -1816,7 +1865,8 @@ async function handleStatus(request: Request, env: Env): Promise<Response> {
         label: customer.delivery.optionLabel,
         amountRub: customer.delivery.amountRub,
         destinationCity: customer.delivery.destinationCity ?? null,
-        destinationPostalCode: customer.delivery.destinationPostalCode,
+        destinationPostalCode: customer.delivery.destinationPostalCode ?? null,
+        destinationAddress: customer.delivery.destinationAddress ?? null,
         etaMinDays: customer.delivery.etaMinDays,
         etaMaxDays: customer.delivery.etaMaxDays,
       }
