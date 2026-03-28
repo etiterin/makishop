@@ -5,7 +5,7 @@ export function SiteFooter() {
   return (
     <footer className="border-t border-border/70 bg-background/95">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 text-sm text-muted-foreground space-y-1">
-        <p>Продавец: самозанятый Пронина Мария Федоровна</p>
+        <p>Продавец: самозанятый</p>
         <p>ИНН: 772980883172</p>
         <p>Город: Москва</p>
         <div className="flex flex-wrap items-center gap-x-3 gap-y-2">

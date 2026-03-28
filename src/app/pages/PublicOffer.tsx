@@ -113,7 +113,7 @@ export function PublicOffer() {
             <p>Самозанятый: Пронина Мария Федоровна</p>
             <p>ИНН: 772980883172</p>
             <p>Город: Москва</p>
-            <p>Telegram: @makimerch</p>
+            <p>Telegram: https://t.me/Makinari</p>
             <p>ВКонтакте: https://vk.com/makinari24</p>
           </section>
         </div>
