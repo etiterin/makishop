@@ -63,9 +63,9 @@ export function Navigation() {
                     <Menu className="h-5 w-5" />
                   </Button>
                 </SheetTrigger>
-                <SheetContent side="left" className="w-full max-w-xs sm:max-w-sm">
+                <SheetContent side="left" className="w-full max-w-xs sm:max-w-sm p-0">
                   <div className="flex flex-col h-full">
-                    <div className="border-b pb-4">
+                    <div className="border-b px-4 pt-4 pb-4 pr-12">
                        <Link to="/" className="group" onClick={() => setMobileMenuOpen(false)}>
                           <div className="flex items-center gap-2">
                             <div className="w-10 h-10 bg-accent/20 rounded-full flex items-center justify-center">
@@ -75,7 +75,7 @@ export function Navigation() {
                           </div>
                        </Link>
                     </div>
-                    <div className="flex flex-col gap-2 py-6">
+                    <div className="flex flex-col gap-2 px-4 py-6">
                       {navItems.map((item) => {
                         const isActive = location.pathname === item.path;
                         return (
