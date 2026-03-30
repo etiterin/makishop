@@ -361,6 +361,20 @@
         "Покрыт прочным слоем эпоксидной смолы",
         "Подвеска шелковистая кисточка"
       ]
+    },
+    {
+      "inStock": true,
+      "images": [
+        "/images/uploads/tghzyjnz.jpg",
+        "/images/uploads/gbfgbhgd.jpg",
+        "/images/uploads/hfbmxzfhmz.jpg"
+      ],
+      "fandoms": [
+        "Honkai Star Rail"
+      ],
+      "category": "ribbon",
+      "price": 650,
+      "name": "Лента Хонкай Звездная Электричка"
     }
   ]
 }
