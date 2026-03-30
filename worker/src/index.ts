@@ -1816,6 +1816,7 @@ async function handleCreateCheckout(request: Request, env: Env, executionContext
     Description: `Оплата заказа ${orderId.slice(0, 8)}`,
     SignatureValue: signature,
     Culture: "ru",
+    Encoding: "UTF-8",
   });
 
   if (roboConfig.isTest) {

@@ -106,6 +106,7 @@ function submitPaymentForm(args: {
   const form = document.createElement('form');
   form.method = (args.method ?? 'POST').toUpperCase();
   form.action = args.action;
+  form.acceptCharset = 'UTF-8';
   form.style.display = 'none';
 
   Object.entries(args.fields).forEach(([key, value]) => {
