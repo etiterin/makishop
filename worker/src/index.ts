@@ -18,6 +18,7 @@ type Env = {
   ROBO_PASS2_LIVE?: string;
   ROBO_SUCCESS_URL?: string;
   ROBO_FAIL_URL?: string;
+  ROBO_RECEIPT_TAX?: string;
   TRACK_BASE_URL?: string;
   ADMIN_STATUS_API_KEY?: string;
   TELEGRAM_BOT_TOKEN?: string;
@@ -184,6 +185,14 @@ type OrderLineItem = {
   price: number;
 };
 
+type CheckoutLineItem = {
+  id: number;
+  name: string;
+  quantity: number;
+  price: number;
+  lineKopecks: number;
+};
+
 type OrderCustomerDelivery = {
   mode: DeliveryProvider;
   destinationCity?: string;
@@ -220,6 +229,8 @@ type ProductShippingProfile = {
   heightCm: number;
 };
 
+type ReceiptTax = "none" | "vat0" | "vat10" | "vat110" | "vat20" | "vat22" | "vat120" | "vat122" | "vat5" | "vat7" | "vat105" | "vat107";
+
 const catalog = new Map<number, CatalogProduct>(
   (productsData.products as CatalogProduct[]).map((product) => [product.id, product]),
 );
@@ -249,6 +260,7 @@ const FIXED_DELIVERY_RATES_RUB: Record<Exclude<DeliveryProvider, "cdek">, number
   ozon: 300,
   yandex: 300,
 };
+const DEFAULT_RECEIPT_TAX: ReceiptTax = "none";
 
 function normalizeDeliveryMode(value: string | undefined): DeliveryMode {
   if (
@@ -405,6 +417,79 @@ function isLikelyPhone(value: string | undefined): boolean {
   if (!value) return false;
   const digits = value.replace(/\D/g, "");
   return digits.length >= 10;
+}
+
+function normalizeReceiptTax(value: string | undefined): ReceiptTax {
+  if (
+    value === "none"
+    || value === "vat0"
+    || value === "vat10"
+    || value === "vat110"
+    || value === "vat20"
+    || value === "vat22"
+    || value === "vat120"
+    || value === "vat122"
+    || value === "vat5"
+    || value === "vat7"
+    || value === "vat105"
+    || value === "vat107"
+  ) {
+    return value;
+  }
+  return DEFAULT_RECEIPT_TAX;
+}
+
+function sanitizeReceiptItemName(value: string): string {
+  const normalized = value
+    .replace(/[\u0000-\u001F\u007F]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  return normalized.slice(0, 128) || "Товар";
+}
+
+function buildRobokassaReceipt(args: {
+  lineItems: CheckoutLineItem[];
+  delivery?: OrderCustomerDelivery;
+  tax: ReceiptTax;
+}): string {
+  const { lineItems, delivery, tax } = args;
+  const items: Array<{
+    name: string;
+    quantity: number;
+    sum: number;
+    tax: ReceiptTax;
+    payment_method: "full_payment";
+    payment_object: "commodity" | "service";
+  }> = [];
+
+  for (const line of lineItems) {
+    if (line.lineKopecks <= 0 || line.quantity <= 0) continue;
+    items.push({
+      name: sanitizeReceiptItemName(line.name),
+      quantity: line.quantity,
+      sum: Number((line.lineKopecks / 100).toFixed(2)),
+      tax,
+      payment_method: "full_payment",
+      payment_object: "commodity",
+    });
+  }
+
+  if (delivery && delivery.amountRub > 0) {
+    items.push({
+      name: "Доставка",
+      quantity: 1,
+      sum: Number(delivery.amountRub.toFixed(2)),
+      tax,
+      payment_method: "full_payment",
+      payment_object: "service",
+    });
+  }
+
+  if (items.length === 0) {
+    throw new Error("Receipt must contain at least one item");
+  }
+
+  return encodeURIComponent(JSON.stringify({ items }));
 }
 
 function parseJsonObject<T>(raw: string | null): T | null {
@@ -1514,7 +1599,7 @@ async function handleCreateCheckout(request: Request, env: Env, executionContext
     merged.set(item.id, (merged.get(item.id) ?? 0) + item.quantity);
   }
 
-  const lineItems: Array<{ id: number; name: string; quantity: number; price: number; lineKopecks: number }> = [];
+  const lineItems: CheckoutLineItem[] = [];
   let totalKopecks = 0;
 
   for (const [id, quantity] of merged.entries()) {
@@ -1706,8 +1791,20 @@ async function handleCreateCheckout(request: Request, env: Env, executionContext
     executionContext.waitUntil(notifyTelegramTargets(env, message));
   }
 
+  let receiptEncoded = "";
+  try {
+    receiptEncoded = buildRobokassaReceipt({
+      lineItems,
+      delivery: selectedDelivery,
+      tax: normalizeReceiptTax(env.ROBO_RECEIPT_TAX),
+    });
+  } catch (error) {
+    console.error("Failed to build receipt", error);
+    return jsonResponse(request, env, { error: "Не удалось сформировать чек для оплаты" }, 500);
+  }
+
   const signature = md5Hex(
-    `${roboConfig.merchantLogin}:${amountRub}:${invId}:${roboConfig.pass1}`,
+    `${roboConfig.merchantLogin}:${amountRub}:${invId}:${receiptEncoded}:${roboConfig.pass1}`,
   );
 
   const paymentParams = new URLSearchParams({
@@ -1723,6 +1820,7 @@ async function handleCreateCheckout(request: Request, env: Env, executionContext
     paymentParams.set("IsTest", "1");
   }
   paymentParams.set("Email", normalizedEmail);
+  paymentParams.set("Receipt", receiptEncoded);
   if (env.ROBO_SUCCESS_URL) {
     paymentParams.set("SuccessURL", env.ROBO_SUCCESS_URL);
   }
