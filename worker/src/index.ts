@@ -1805,9 +1805,26 @@ async function handleCreateCheckout(request: Request, env: Env, executionContext
 
   const receiptEncoded = encodeURIComponent(receiptJson);
 
-  const signature = md5Hex(
-    `${roboConfig.merchantLogin}:${amountRub}:${invId}:${receiptEncoded}:${roboConfig.pass1}`,
-  );
+  const successUrl2 = env.ROBO_SUCCESS_URL?.trim();
+  const failUrl2 = env.ROBO_FAIL_URL?.trim();
+
+  const signatureParts = [
+    roboConfig.merchantLogin,
+    amountRub,
+    String(invId),
+    receiptEncoded,
+  ];
+
+  // SuccessUrl2/FailUrl2 must be included in signature when they are sent.
+  if (successUrl2) {
+    signatureParts.push(successUrl2, "GET");
+  }
+  if (failUrl2) {
+    signatureParts.push(failUrl2, "GET");
+  }
+  signatureParts.push(roboConfig.pass1);
+
+  const signature = md5Hex(signatureParts.join(":"));
 
   const paymentParams = new URLSearchParams({
     MerchantLogin: roboConfig.merchantLogin,
@@ -1823,11 +1840,13 @@ async function handleCreateCheckout(request: Request, env: Env, executionContext
     paymentParams.set("IsTest", "1");
   }
   paymentParams.set("Email", normalizedEmail);
-  if (env.ROBO_SUCCESS_URL) {
-    paymentParams.set("SuccessURL", env.ROBO_SUCCESS_URL);
+  if (successUrl2) {
+    paymentParams.set("SuccessUrl2", successUrl2);
+    paymentParams.set("SuccessUrl2Method", "GET");
   }
-  if (env.ROBO_FAIL_URL) {
-    paymentParams.set("FailURL", env.ROBO_FAIL_URL);
+  if (failUrl2) {
+    paymentParams.set("FailUrl2", failUrl2);
+    paymentParams.set("FailUrl2Method", "GET");
   }
 
   const paymentFormFields: Record<string, string> = Object.fromEntries(paymentParams.entries());
