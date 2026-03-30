@@ -395,6 +395,24 @@
         "Размер 10х10 см",
         "Прозрачная пленка"
       ]
+    },
+    {
+      "inStock": true,
+      "id": 26,
+      "images": [
+        "/images/uploads/ftfhtghth.jpg",
+        "/images/uploads/jzyhjzfkm.jpg"
+      ],
+      "name": "Стикер Кофейная Ведьмочка",
+      "price": 150,
+      "category": "sticker",
+      "fandoms": [
+        "Original"
+      ],
+      "detailsItems": [
+        "Размер 10х10",
+        "Прозрачная пленка"
+      ]
     }
   ]
 }
