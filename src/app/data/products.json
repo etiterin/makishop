@@ -361,6 +361,95 @@
         "Покрыт прочным слоем эпоксидной смолы",
         "Подвеска шелковистая кисточка"
       ]
+    },
+    {
+      "inStock": true,
+      "images": [
+        "/images/uploads/tghzyjnz.jpg",
+        "/images/uploads/gbfgbhgd.jpg",
+        "/images/uploads/hfbmxzfhmz.jpg"
+      ],
+      "fandoms": [
+        "Honkai Star Rail"
+      ],
+      "category": "ribbon",
+      "price": 650,
+      "name": "Лента Хонкай Звездная Электричка",
+      "id": 24
+    },
+    {
+      "fandoms": [
+        "Evangelion"
+      ],
+      "price": 150,
+      "name": "Стикер Аянами Рей",
+      "inStock": true,
+      "detailsTitle": "",
+      "images": [
+        "/images/uploads/dgnbgngn.jpg",
+        "/images/uploads/filfy-fyo-o.jpg"
+      ],
+      "id": 25,
+      "category": "sticker",
+      "detailsItems": [
+        "Размер 10х10 см",
+        "Прозрачная пленка"
+      ]
+    },
+    {
+      "inStock": true,
+      "id": 26,
+      "images": [
+        "/images/uploads/ftfhtghth.jpg",
+        "/images/uploads/jzyhjzfkm.jpg"
+      ],
+      "name": "Стикер Кофейная Ведьмочка",
+      "price": 150,
+      "category": "sticker",
+      "fandoms": [
+        "Original"
+      ],
+      "detailsItems": [
+        "Размер 10х10",
+        "Прозрачная пленка"
+      ]
+    },
+    {
+      "inStock": true,
+      "id": 27,
+      "name": "Стикер Яблоня",
+      "price": 150,
+      "category": "sticker",
+      "fandoms": [
+        "Original"
+      ],
+      "images": [
+        "/images/uploads/zhyjzajzayrjz.jpg",
+        "/images/uploads/nzfgzhfmzhjmjgmzjg.jpg"
+      ],
+      "detailsItems": [
+        "Размер 10х10",
+        "Прозрачная пленка"
+      ]
+    },
+    {
+      "fandoms": [
+        "Pokemon"
+      ],
+      "price": 650,
+      "name": "Брелок Флареон",
+      "inStock": true,
+      "images": [
+        "/images/uploads/шаблон.jpg"
+      ],
+      "id": 28,
+      "description": "",
+      "category": "keychain",
+      "detailsItems": [
+        "Размер 6 см",
+        "Сияющий и яркий акрил",
+        "Подвеска-звездочка"
+      ]
     }
   ]
 }
