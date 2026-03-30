@@ -4,15 +4,9 @@ name: Manual Deploy to GitHub Pages
 on:
   workflow_dispatch:
 
-# Права для публикации GitHub Pages через Actions
+# Права на запись в репозиторий
 permissions:
-  contents: read
-  pages: write
-  id-token: write
-
-concurrency:
-  group: pages
-  cancel-in-progress: false
+  contents: write
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
@@ -20,12 +14,11 @@ env:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
 
       - name: Setup Node.js 24.x
         uses: actions/setup-node@v6
@@ -33,20 +26,35 @@ jobs:
           node-version: 24.x
           cache: 'npm'
 
-      - name: Configure GitHub Pages
-        uses: actions/configure-pages@v6
-
       - name: Install dependencies
         run: npm ci
 
       - name: Build project
         run: npm run build
 
-      - name: Upload build artifact
-        uses: actions/upload-pages-artifact@v4
-        with:
-          path: ./dist
+      - name: Deploy to gh-pages branch
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
-      - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v5
+          rm -rf .deploy_tmp
+          mkdir .deploy_tmp
+          cp -R dist/. .deploy_tmp/
+
+          git checkout --orphan gh-pages-tmp
+          git rm -rf . >/dev/null 2>&1 || true
+          cp -R .deploy_tmp/. .
+          rm -rf .deploy_tmp
+          touch .nojekyll
+
+          git add -A
+          if git diff --cached --quiet; then
+            echo "No changes to deploy."
+            exit 0
+          fi
+
+          git commit -m "Deploy from workflow ${GITHUB_SHA::7}"
+          git push -f "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" HEAD:gh-pages
