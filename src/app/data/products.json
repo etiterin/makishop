@@ -376,6 +376,25 @@
       "price": 650,
       "name": "Лента Хонкай Звездная Электричка",
       "id": 24
+    },
+    {
+      "fandoms": [
+        "Evangelion"
+      ],
+      "price": 150,
+      "name": "Стикер Аянами Рей",
+      "inStock": true,
+      "detailsTitle": "",
+      "images": [
+        "/images/uploads/dgnbgngn.jpg",
+        "/images/uploads/filfy-fyo-o.jpg"
+      ],
+      "id": 25,
+      "category": "sticker",
+      "detailsItems": [
+        "Размер 10х10 см",
+        "Прозрачная пленка"
+      ]
     }
   ]
 }
