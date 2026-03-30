@@ -431,6 +431,25 @@
         "Размер 10х10",
         "Прозрачная пленка"
       ]
+    },
+    {
+      "fandoms": [
+        "Pokemon"
+      ],
+      "price": 650,
+      "name": "Брелок Флареон",
+      "inStock": true,
+      "images": [
+        "/images/uploads/шаблон.jpg"
+      ],
+      "id": 28,
+      "description": "",
+      "category": "keychain",
+      "detailsItems": [
+        "Размер 6 см",
+        "Сияющий и яркий акрил",
+        "Подвеска-звездочка"
+      ]
     }
   ]
 }
