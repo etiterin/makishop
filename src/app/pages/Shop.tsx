@@ -16,6 +16,7 @@ import {
 import { useCart } from '../context/CartContext';
 import { toast } from 'sonner';
 import type { Product, ProductCategory, ProductFandom } from '../types/product';
+import { compareProductsBySiteOrder, PRODUCT_CATEGORY_SORT_ORDER } from '../lib/productSort';
 
 const products = productsData.products;
 
@@ -52,16 +53,15 @@ export function Shop() {
         filtered = filtered.filter((p) => p.fandoms && p.fandoms.includes(fandomFilter));
     }
     
-    return filtered.sort((a, b) => {
-      if (a.inStock === b.inStock) return 0;
-      return a.inStock ? -1 : 1;
-    });
+    return filtered.sort(compareProductsBySiteOrder);
   };
 
   const filteredProducts = getSortedProducts();
 
-  const categories = Object.entries(categoryLabels).map(([value, label]) => ({ value: value as ProductCategory, label }));
-  categories.unshift({ value: 'all', label: 'Все товары' });
+  const categories = [
+    { value: 'all' as const, label: 'Все товары' },
+    ...PRODUCT_CATEGORY_SORT_ORDER.map((value) => ({ value, label: categoryLabels[value] })),
+  ];
 
   const fandoms = Object.entries(fandomLabels).map(([value, label]) => ({ value: value as ProductFandom, label }));
   fandoms.unshift({ value: 'all', label: 'Все фандомы' });
