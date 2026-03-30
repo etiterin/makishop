@@ -413,6 +413,24 @@
         "Размер 10х10",
         "Прозрачная пленка"
       ]
+    },
+    {
+      "inStock": true,
+      "id": 27,
+      "name": "Стикер Яблоня",
+      "price": 150,
+      "category": "sticker",
+      "fandoms": [
+        "Original"
+      ],
+      "images": [
+        "/images/uploads/zhyjzajzayrjz.jpg",
+        "/images/uploads/nzfgzhfmzhjmjgmzjg.jpg"
+      ],
+      "detailsItems": [
+        "Размер 10х10",
+        "Прозрачная пленка"
+      ]
     }
   ]
 }
