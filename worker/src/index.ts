@@ -231,6 +231,11 @@ type ProductShippingProfile = {
 
 type ReceiptTax = "none" | "vat0" | "vat10" | "vat110" | "vat20" | "vat22" | "vat120" | "vat122" | "vat5" | "vat7" | "vat105" | "vat107";
 
+type RateLimitUpsertResult = {
+  count: number;
+  window_start: number;
+};
+
 const catalog = new Map<number, CatalogProduct>(
   (productsData.products as CatalogProduct[]).map((product) => [product.id, product]),
 );
@@ -261,6 +266,13 @@ const FIXED_DELIVERY_RATES_RUB: Record<Exclude<DeliveryProvider, "cdek">, number
   yandex: 300,
 };
 const DEFAULT_RECEIPT_TAX: ReceiptTax = "none";
+const RATE_LIMIT_WINDOW_SECONDS = 60;
+const RATE_LIMIT_RETENTION_SECONDS = 60 * 60 * 24;
+const RATE_LIMITS = {
+  checkoutCreate: 3,
+  deliveryQuotes: 5,
+  orderTrack: 7,
+} as const;
 
 function normalizeDeliveryMode(value: string | undefined): DeliveryMode {
   if (
@@ -1467,6 +1479,109 @@ function hasAdminAccess(request: Request, env: Env): boolean {
   return Boolean(headerToken && headerToken === expected);
 }
 
+function getClientIp(request: Request): string {
+  const cfIp = request.headers.get("CF-Connecting-IP")?.trim();
+  if (cfIp) return cfIp;
+
+  const forwarded = request.headers.get("X-Forwarded-For")?.trim();
+  if (forwarded) {
+    const first = forwarded.split(",")[0]?.trim();
+    if (first) return first;
+  }
+
+  return "unknown";
+}
+
+function buildRateLimitBucketKey(scope: string, ip: string): string {
+  return `${scope}:${ip.slice(0, 120)}`;
+}
+
+async function consumeRateLimit(args: {
+  env: Env;
+  bucketKey: string;
+  limit: number;
+  windowSeconds: number;
+}): Promise<{ allowed: boolean; retryAfterSeconds: number }> {
+  const { env, bucketKey, limit, windowSeconds } = args;
+  const nowSeconds = Math.floor(Date.now() / 1000);
+  const windowStart = nowSeconds - (nowSeconds % windowSeconds);
+  const now = nowIso();
+
+  try {
+    const row = await env.DB.prepare(
+      `INSERT INTO rate_limits (bucket_key, window_start, count, updated_at)
+       VALUES (?, ?, 1, ?)
+       ON CONFLICT(bucket_key) DO UPDATE SET
+         count = CASE
+           WHEN rate_limits.window_start = excluded.window_start THEN rate_limits.count + 1
+           ELSE 1
+         END,
+         window_start = CASE
+           WHEN rate_limits.window_start = excluded.window_start THEN rate_limits.window_start
+           ELSE excluded.window_start
+         END,
+         updated_at = excluded.updated_at
+       RETURNING count, window_start`,
+    )
+      .bind(bucketKey, windowStart, now)
+      .first<RateLimitUpsertResult>();
+
+    // Opportunistic cleanup to keep table small.
+    if (Math.random() < 0.02) {
+      const minWindowStart = nowSeconds - RATE_LIMIT_RETENTION_SECONDS;
+      await env.DB.prepare("DELETE FROM rate_limits WHERE window_start < ?")
+        .bind(minWindowStart)
+        .run();
+    }
+
+    const count = Number(row?.count ?? 1);
+    const currentWindowStart = Number(row?.window_start ?? windowStart);
+    const retryAfterSeconds = Math.max(1, currentWindowStart + windowSeconds - nowSeconds);
+    return {
+      allowed: count <= limit,
+      retryAfterSeconds,
+    };
+  } catch (error) {
+    // Fail open if rate-limit storage is temporarily unavailable.
+    console.error("Rate limit check failed", { bucketKey, error });
+    return {
+      allowed: true,
+      retryAfterSeconds: 1,
+    };
+  }
+}
+
+async function applyRateLimit(args: {
+  request: Request;
+  env: Env;
+  scope: string;
+  limit: number;
+}): Promise<Response | null> {
+  const { request, env, scope, limit } = args;
+  const ip = getClientIp(request);
+  const bucketKey = buildRateLimitBucketKey(scope, ip);
+  const result = await consumeRateLimit({
+    env,
+    bucketKey,
+    limit,
+    windowSeconds: RATE_LIMIT_WINDOW_SECONDS,
+  });
+
+  if (result.allowed) return null;
+
+  const response = jsonResponse(
+    request,
+    env,
+    {
+      error: "Слишком много запросов. Попробуйте чуть позже.",
+      retryAfterSeconds: result.retryAfterSeconds,
+    },
+    429,
+  );
+  response.headers.set("Retry-After", String(result.retryAfterSeconds));
+  return response;
+}
+
 function generateStatusToken(): string {
   const bytes = new Uint8Array(16);
   crypto.getRandomValues(bytes);
@@ -2264,10 +2379,24 @@ export default {
     }
 
     if (url.pathname === "/api/delivery/quotes" && request.method === "POST") {
+      const limited = await applyRateLimit({
+        request,
+        env,
+        scope: "delivery_quotes",
+        limit: RATE_LIMITS.deliveryQuotes,
+      });
+      if (limited) return limited;
       return handleDeliveryQuotes(request, env);
     }
 
     if (url.pathname === "/api/checkout/create" && request.method === "POST") {
+      const limited = await applyRateLimit({
+        request,
+        env,
+        scope: "checkout_create",
+        limit: RATE_LIMITS.checkoutCreate,
+      });
+      if (limited) return limited;
       return handleCreateCheckout(request, env, ctx);
     }
 
@@ -2280,6 +2409,13 @@ export default {
     }
 
     if (url.pathname === "/api/orders/track" && request.method === "GET") {
+      const limited = await applyRateLimit({
+        request,
+        env,
+        scope: "orders_track",
+        limit: RATE_LIMITS.orderTrack,
+      });
+      if (limited) return limited;
       return handleStatus(request, env);
     }
 
