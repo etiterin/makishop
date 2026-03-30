@@ -1100,27 +1100,12 @@ function resolveRoboConfig(env: Env, mode: RoboMode): RoboConfig | null {
   };
 }
 
-function getFallbackMode(mode: RoboMode): RoboMode {
-  return mode === "test" ? "live" : "test";
-}
-
 function getResultVerificationConfigs(env: Env, storedMode: string | null | undefined): RoboConfig[] {
-  const modes: RoboMode[] = [];
   const stored = parseStoredMode(storedMode);
-  const active = getActiveRoboMode(env);
+  const strictMode = stored ?? getActiveRoboMode(env);
+  const config = resolveRoboConfig(env, strictMode);
 
-  if (stored) {
-    modes.push(stored);
-  }
-  modes.push(active);
-  modes.push(getFallbackMode(active));
-
-  const uniqueModes = Array.from(new Set(modes));
-  const configs = uniqueModes
-    .map((mode) => resolveRoboConfig(env, mode))
-    .filter((config): config is RoboConfig => Boolean(config));
-
-  return configs;
+  return config ? [config] : [];
 }
 
 function buildShpSignatureTail(params: URLSearchParams): string {
@@ -2197,11 +2182,13 @@ async function handleTelegramWebhook(request: Request, env: Env, pathname: strin
   }
 
   const expectedSecret = getTelegramWebhookSecret(env);
-  if (expectedSecret) {
-    const actualSecret = pathname.replace("/api/telegram/webhook", "").replace(/^\/+/, "");
-    if (actualSecret !== expectedSecret) {
-      return unauthorized(request, env);
-    }
+  if (!expectedSecret) {
+    return jsonResponse(request, env, { error: "Telegram webhook secret is required" }, 503);
+  }
+
+  const actualSecret = pathname.replace("/api/telegram/webhook", "").replace(/^\/+/, "");
+  if (actualSecret !== expectedSecret) {
+    return unauthorized(request, env);
   }
 
   let update: TelegramUpdate;
