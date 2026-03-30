@@ -450,6 +450,24 @@
         "Сияющий и яркий акрил",
         "Подвеска-звездочка"
       ]
+    },
+    {
+      "inStock": true,
+      "id": 29,
+      "name": "Брелок Гласеон",
+      "price": 650,
+      "category": "keychain",
+      "fandoms": [
+        "Pokemon"
+      ],
+      "images": [
+        "/images/uploads/sfbgddg.jpg"
+      ],
+      "detailsItems": [
+        "Размер 6 см",
+        "Яркий, сияющий акрил",
+        "Подвеска-звездочка"
+      ]
     }
   ]
 }
