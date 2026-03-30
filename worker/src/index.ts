@@ -489,7 +489,7 @@ function buildRobokassaReceipt(args: {
     throw new Error("Receipt must contain at least one item");
   }
 
-  return encodeURIComponent(JSON.stringify({ items }));
+  return JSON.stringify({ items });
 }
 
 function parseJsonObject<T>(raw: string | null): T | null {
@@ -1791,9 +1791,9 @@ async function handleCreateCheckout(request: Request, env: Env, executionContext
     executionContext.waitUntil(notifyTelegramTargets(env, message));
   }
 
-  let receiptEncoded = "";
+  let receiptJson = "";
   try {
-    receiptEncoded = buildRobokassaReceipt({
+    receiptJson = buildRobokassaReceipt({
       lineItems,
       delivery: selectedDelivery,
       tax: normalizeReceiptTax(env.ROBO_RECEIPT_TAX),
@@ -1802,6 +1802,8 @@ async function handleCreateCheckout(request: Request, env: Env, executionContext
     console.error("Failed to build receipt", error);
     return jsonResponse(request, env, { error: "Не удалось сформировать чек для оплаты" }, 500);
   }
+
+  const receiptEncoded = encodeURIComponent(receiptJson);
 
   const signature = md5Hex(
     `${roboConfig.merchantLogin}:${amountRub}:${invId}:${receiptEncoded}:${roboConfig.pass1}`,
@@ -1820,13 +1822,14 @@ async function handleCreateCheckout(request: Request, env: Env, executionContext
     paymentParams.set("IsTest", "1");
   }
   paymentParams.set("Email", normalizedEmail);
-  paymentParams.set("Receipt", receiptEncoded);
   if (env.ROBO_SUCCESS_URL) {
     paymentParams.set("SuccessURL", env.ROBO_SUCCESS_URL);
   }
   if (env.ROBO_FAIL_URL) {
     paymentParams.set("FailURL", env.ROBO_FAIL_URL);
   }
+
+  const paymentQuery = `${paymentParams.toString()}&Receipt=${receiptEncoded}`;
 
   return jsonResponse(request, env, {
     orderId,
@@ -1836,7 +1839,7 @@ async function handleCreateCheckout(request: Request, env: Env, executionContext
     amountRub,
     delivery: selectedDelivery ?? null,
     paymentMode: roboConfig.mode,
-    paymentUrl: `https://auth.robokassa.ru/Merchant/Index.aspx?${paymentParams.toString()}`,
+    paymentUrl: `https://auth.robokassa.ru/Merchant/Index.aspx?${paymentQuery}`,
   });
 }
 
