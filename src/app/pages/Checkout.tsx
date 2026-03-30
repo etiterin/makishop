@@ -9,7 +9,12 @@ import { toast } from 'sonner';
 import { Check, Minus, Plus, Trash2, Truck } from 'lucide-react';
 
 type CreateCheckoutResponse = {
-  paymentUrl: string;
+  paymentUrl?: string;
+  paymentForm?: {
+    action: string;
+    method?: string;
+    fields: Record<string, string>;
+  };
   orderId: string;
   statusToken: string;
 };
@@ -91,6 +96,28 @@ async function parseJsonResponse<T>(response: Response): Promise<T> {
   } catch {
     throw new Error(`Сервер вернул некорректный JSON (HTTP ${response.status})`);
   }
+}
+
+function submitPaymentForm(args: {
+  action: string;
+  method?: string;
+  fields: Record<string, string>;
+}): void {
+  const form = document.createElement('form');
+  form.method = (args.method ?? 'POST').toUpperCase();
+  form.action = args.action;
+  form.style.display = 'none';
+
+  Object.entries(args.fields).forEach(([key, value]) => {
+    const input = document.createElement('input');
+    input.type = 'hidden';
+    input.name = key;
+    input.value = value;
+    form.appendChild(input);
+  });
+
+  document.body.appendChild(form);
+  form.submit();
 }
 
 const CHECKOUT_DRAFT_STORAGE_KEY = 'checkoutDraft';
@@ -326,7 +353,7 @@ export function Checkout() {
       });
 
       const data = await parseJsonResponse<Partial<CreateCheckoutResponse> & { error?: string }>(response);
-      if (!response.ok || !data.paymentUrl || !data.orderId || !data.statusToken) {
+      if (!response.ok || !data.orderId || !data.statusToken) {
         throw new Error(data.error || 'Не удалось создать заказ для онлайн-оплаты');
       }
 
@@ -339,7 +366,21 @@ export function Checkout() {
         }),
       );
 
-      window.location.href = data.paymentUrl;
+      if (data.paymentForm?.action && data.paymentForm?.fields) {
+        submitPaymentForm({
+          action: data.paymentForm.action,
+          method: data.paymentForm.method,
+          fields: data.paymentForm.fields,
+        });
+        return;
+      }
+
+      if (data.paymentUrl) {
+        window.location.href = data.paymentUrl;
+        return;
+      }
+
+      throw new Error('Не удалось подготовить форму оплаты');
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Ошибка при создании заказа';
       toast.error('Не получилось перейти к оплате', {

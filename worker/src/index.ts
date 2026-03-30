@@ -1829,6 +1829,9 @@ async function handleCreateCheckout(request: Request, env: Env, executionContext
     paymentParams.set("FailURL", env.ROBO_FAIL_URL);
   }
 
+  const paymentFormFields: Record<string, string> = Object.fromEntries(paymentParams.entries());
+  paymentFormFields.Receipt = receiptEncoded;
+  const paymentAction = "https://auth.robokassa.ru/Merchant/Index.aspx";
   const paymentQuery = `${paymentParams.toString()}&Receipt=${receiptEncoded}`;
 
   return jsonResponse(request, env, {
@@ -1839,6 +1842,11 @@ async function handleCreateCheckout(request: Request, env: Env, executionContext
     amountRub,
     delivery: selectedDelivery ?? null,
     paymentMode: roboConfig.mode,
+    paymentForm: {
+      action: paymentAction,
+      method: "POST",
+      fields: paymentFormFields,
+    },
     paymentUrl: `https://auth.robokassa.ru/Merchant/Index.aspx?${paymentQuery}`,
   });
 }
