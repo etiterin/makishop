@@ -1,8 +1,21 @@
 import { motion } from 'motion/react';
+import { useEffect, useState } from 'react';
 import { ImageWithFallback } from '../components/figma/ImageWithFallback';
-import { MapPin, Palette, Scroll, Sparkles } from 'lucide-react';
+import { ChevronLeft, ChevronRight, MapPin, MessageCircle, Palette, Scroll, Sparkles, X } from 'lucide-react';
+
+const reviewImages = [
+  { src: '/images/reviews/review-1.jpeg', alt: 'Отзыв покупателя 1' },
+  { src: '/images/reviews/review-2.jpeg', alt: 'Отзыв покупателя 2' },
+  { src: '/images/reviews/review-3.jpeg', alt: 'Отзыв покупателя 3' },
+  { src: '/images/reviews/review-4.jpeg', alt: 'Отзыв покупателя 4' },
+  { src: '/images/reviews/review-5.jpeg', alt: 'Отзыв покупателя 5' },
+  { src: '/images/reviews/review-6.jpeg', alt: 'Отзыв покупателя 6' },
+  { src: '/images/reviews/review-7.jpeg', alt: 'Отзыв покупателя 7' },
+];
 
 export function About() {
+  const [activeReviewIndex, setActiveReviewIndex] = useState<number | null>(null);
+
   const values = [
     {
       icon: Palette,
@@ -20,6 +33,33 @@ export function About() {
       description: 'Тираж всех позиций ограничен. Успей пополнить свой инвентарь уникальным лутом.',
     },
   ];
+
+  useEffect(() => {
+    if (activeReviewIndex === null) {
+      return;
+    }
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setActiveReviewIndex(null);
+      } else if (event.key === 'ArrowRight') {
+        setActiveReviewIndex((prev) => (prev === null ? 0 : (prev + 1) % reviewImages.length));
+      } else if (event.key === 'ArrowLeft') {
+        setActiveReviewIndex((prev) => (prev === null ? 0 : (prev - 1 + reviewImages.length) % reviewImages.length));
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [activeReviewIndex]);
+
+  const activeReview = activeReviewIndex === null ? null : reviewImages[activeReviewIndex];
   
   return (
     <div className="min-h-screen pt-24 pb-20 px-6">
@@ -78,6 +118,45 @@ export function About() {
             </div>
           </motion.div>
         </div>
+
+        {/* Reviews */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.6 }}
+          className="space-y-6"
+        >
+          <div className="text-center space-y-2">
+            <h2 className="text-3xl flex items-center justify-center gap-2">
+              <MessageCircle className="w-6 h-6 text-accent" />
+              Отзывы
+            </h2>
+            <p className="text-muted-foreground">
+              Скролль ленту, а по клику открывай скриншот в полном размере.
+            </p>
+          </div>
+
+          <div className="flex gap-4 overflow-x-auto pb-4 snap-x snap-mandatory">
+            {reviewImages.map((review, index) => (
+              <button
+                type="button"
+                key={review.src}
+                onClick={() => setActiveReviewIndex(index)}
+                className="snap-start shrink-0 w-[240px] sm:w-[280px] md:w-[320px] rounded-2xl border border-border/60 bg-card shadow-sm overflow-hidden transition hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                aria-label={`Открыть ${review.alt}`}
+              >
+                <div className="h-[320px] sm:h-[360px] md:h-[400px] p-3 bg-muted/20 flex items-center justify-center">
+                  <ImageWithFallback
+                    src={review.src}
+                    alt={review.alt}
+                    className="max-w-full max-h-full object-contain rounded-xl"
+                  />
+                </div>
+              </button>
+            ))}
+          </div>
+        </motion.div>
 
         {/* Offline Shelves */}
         <motion.div
@@ -169,6 +248,59 @@ export function About() {
           </div>
         </div>
       </div>
+
+      {activeReview && (
+        <div
+          className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm p-3 sm:p-6 flex items-center justify-center gap-2"
+          onClick={() => setActiveReviewIndex(null)}
+        >
+          <button
+            type="button"
+            className="absolute top-3 right-3 sm:top-6 sm:right-6 w-10 h-10 rounded-full bg-black/35 text-white flex items-center justify-center hover:bg-black/55 transition"
+            onClick={() => setActiveReviewIndex(null)}
+            aria-label="Закрыть"
+          >
+            <X className="w-5 h-5" />
+          </button>
+
+          <button
+            type="button"
+            className="hidden md:flex w-10 h-10 rounded-full bg-black/35 text-white items-center justify-center hover:bg-black/55 transition"
+            onClick={(event) => {
+              event.stopPropagation();
+              setActiveReviewIndex((prev) => (prev === null ? 0 : (prev - 1 + reviewImages.length) % reviewImages.length));
+            }}
+            aria-label="Предыдущий отзыв"
+          >
+            <ChevronLeft className="w-5 h-5" />
+          </button>
+
+          <div
+            className="w-full max-w-5xl max-h-[90vh] rounded-2xl bg-card p-2 sm:p-4"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="h-full max-h-[86vh] flex items-center justify-center bg-muted/20 rounded-xl">
+              <ImageWithFallback
+                src={activeReview.src}
+                alt={activeReview.alt}
+                className="max-w-full max-h-[84vh] object-contain rounded-xl"
+              />
+            </div>
+          </div>
+
+          <button
+            type="button"
+            className="hidden md:flex w-10 h-10 rounded-full bg-black/35 text-white items-center justify-center hover:bg-black/55 transition"
+            onClick={(event) => {
+              event.stopPropagation();
+              setActiveReviewIndex((prev) => (prev === null ? 0 : (prev + 1) % reviewImages.length));
+            }}
+            aria-label="Следующий отзыв"
+          >
+            <ChevronRight className="w-5 h-5" />
+          </button>
+        </div>
+      )}
     </div>
   );
 }
