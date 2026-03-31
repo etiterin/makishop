@@ -1,5 +1,5 @@
 import { motion } from 'motion/react';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { ImageWithFallback } from '../components/figma/ImageWithFallback';
 import { ChevronLeft, ChevronRight, MapPin, MessageCircle, Palette, Scroll, Sparkles, X } from 'lucide-react';
 
@@ -15,6 +15,7 @@ const reviewImages = [
 
 export function About() {
   const [activeReviewIndex, setActiveReviewIndex] = useState<number | null>(null);
+  const reviewSwipeStartX = useRef<number | null>(null);
 
   const values = [
     {
@@ -58,6 +59,14 @@ export function About() {
       window.removeEventListener('keydown', handleKeyDown);
     };
   }, [activeReviewIndex]);
+
+  const goToPreviousReview = () => {
+    setActiveReviewIndex((prev) => (prev === null ? 0 : (prev - 1 + reviewImages.length) % reviewImages.length));
+  };
+
+  const goToNextReview = () => {
+    setActiveReviewIndex((prev) => (prev === null ? 0 : (prev + 1) % reviewImages.length));
+  };
 
   const activeReview = activeReviewIndex === null ? null : reviewImages[activeReviewIndex];
   
@@ -265,10 +274,10 @@ export function About() {
 
           <button
             type="button"
-            className="hidden md:flex w-10 h-10 rounded-full bg-black/35 text-white items-center justify-center hover:bg-black/55 transition"
+            className="absolute left-2 sm:left-4 md:left-6 top-1/2 -translate-y-1/2 z-10 flex w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-black/35 text-white items-center justify-center hover:bg-black/55 transition"
             onClick={(event) => {
               event.stopPropagation();
-              setActiveReviewIndex((prev) => (prev === null ? 0 : (prev - 1 + reviewImages.length) % reviewImages.length));
+              goToPreviousReview();
             }}
             aria-label="Предыдущий отзыв"
           >
@@ -278,6 +287,29 @@ export function About() {
           <div
             className="w-full max-w-5xl max-h-[90vh] rounded-2xl bg-card p-2 sm:p-4"
             onClick={(event) => event.stopPropagation()}
+            onTouchStart={(event) => {
+              reviewSwipeStartX.current = event.changedTouches[0]?.clientX ?? null;
+            }}
+            onTouchEnd={(event) => {
+              const startX = reviewSwipeStartX.current;
+              const endX = event.changedTouches[0]?.clientX ?? null;
+              reviewSwipeStartX.current = null;
+
+              if (startX === null || endX === null) {
+                return;
+              }
+
+              const deltaX = endX - startX;
+              if (Math.abs(deltaX) < 40) {
+                return;
+              }
+
+              if (deltaX > 0) {
+                goToPreviousReview();
+              } else {
+                goToNextReview();
+              }
+            }}
           >
             <div className="h-full max-h-[86vh] flex items-center justify-center bg-muted/20 rounded-xl">
               <ImageWithFallback
@@ -290,10 +322,10 @@ export function About() {
 
           <button
             type="button"
-            className="hidden md:flex w-10 h-10 rounded-full bg-black/35 text-white items-center justify-center hover:bg-black/55 transition"
+            className="absolute right-2 sm:right-4 md:right-6 top-1/2 -translate-y-1/2 z-10 flex w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-black/35 text-white items-center justify-center hover:bg-black/55 transition"
             onClick={(event) => {
               event.stopPropagation();
-              setActiveReviewIndex((prev) => (prev === null ? 0 : (prev + 1) % reviewImages.length));
+              goToNextReview();
             }}
             aria-label="Следующий отзыв"
           >
