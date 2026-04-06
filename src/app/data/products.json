@@ -505,6 +505,44 @@
         "Значок 37 мм",
         "Покрыт сияющей сахарной текстурой"
       ]
+    },
+    {
+      "inStock": true,
+      "id": 32,
+      "name": "Брелок Фапута",
+      "price": 750,
+      "category": "keychain",
+      "fandoms": [
+        "Made in Abyss"
+      ],
+      "images": [
+        "/images/uploads/img_2368.jpeg",
+        "/images/uploads/img_2367.jpeg",
+        "/images/uploads/img_2366.jpeg"
+      ],
+      "detailsItems": [
+        "Винный сияющий акрил с золотыми блестками",
+        "Алая подвеска-капелька",
+        "Карабин красный металлик звездочка"
+      ]
+    },
+    {
+      "inStock": true,
+      "id": 33,
+      "name": "Значок Аянами Рей",
+      "price": 550,
+      "category": "badge",
+      "fandoms": [
+        "Evangelion"
+      ],
+      "images": [
+        "/images/uploads/img_2369.jpeg",
+        "/images/uploads/img_2371.jpeg"
+      ],
+      "detailsItems": [
+        "Блестящая подложка под изображением",
+        "44 мм в диаметре"
+      ]
     }
   ]
 }
