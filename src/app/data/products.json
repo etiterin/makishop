@@ -525,6 +525,24 @@
         "Алая подвеска-капелька",
         "Карабин красный металлик звездочка"
       ]
+    },
+    {
+      "inStock": true,
+      "id": 33,
+      "name": "Значок Аянами Рей",
+      "price": 550,
+      "category": "badge",
+      "fandoms": [
+        "Evangelion"
+      ],
+      "images": [
+        "/images/uploads/img_2369.jpeg",
+        "/images/uploads/img_2371.jpeg"
+      ],
+      "detailsItems": [
+        "Блестящая подложка под изображением",
+        "44 мм в диаметре"
+      ]
     }
   ]
 }
