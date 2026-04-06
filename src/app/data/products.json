@@ -487,6 +487,24 @@
         "Вытянутый стикерлайн с ивилюциями.",
         "Покрыт блестящей пленкой со звездочками. "
       ]
+    },
+    {
+      "inStock": true,
+      "id": 31,
+      "name": "Значок Рейн",
+      "price": 250,
+      "category": "badge",
+      "fandoms": [
+        "Animals"
+      ],
+      "images": [
+        "/images/uploads/img_2364.jpeg",
+        "/images/uploads/img_2363.jpeg"
+      ],
+      "detailsItems": [
+        "Значок 37 мм",
+        "Покрыт сияющей сахарной текстурой"
+      ]
     }
   ]
 }
