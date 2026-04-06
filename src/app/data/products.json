@@ -65,18 +65,28 @@
       ]
     },
     {
-      "inStock": true,
-      "id": 2,
-      "images": [
-        "/images/uploads/gacha.webp"
-      ],
-      "category": "keychain",
-      "name": "Гача-брелок \"Восточные Символы\"",
-      "price": 500,
       "fandoms": [
         "Other"
       ],
-      "description": "Испытай удачу и узнай какой из шести Восточных покровителей присоединится к твоему путешествию."
+      "price": 500,
+      "name": "Гача-брелок \"Восточные Символы\"",
+      "inStock": true,
+      "images": [
+        "/images/uploads/gacha.webp",
+        "/images/uploads/img_2373.jpeg",
+        "/images/uploads/img_2374.jpeg",
+        "/images/uploads/img_2375.jpeg",
+        "/images/uploads/img_2376.jpeg",
+        "/images/uploads/img_2377.jpeg",
+        "/images/uploads/img_2378.jpeg"
+      ],
+      "id": 2,
+      "description": "Испытай удачу и узнай какой из шести Восточных покровителей присоединится к твоему путешествию.",
+      "category": "keychain",
+      "detailsItems": [
+        "6 загадочных зверей затаились в этой гаче!",
+        "Одна секретная опция, тебе точно повезет ✨"
+      ]
     },
     {
       "inStock": false,
