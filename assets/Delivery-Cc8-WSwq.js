@@ -1,4 +1,4 @@
-import{c as t,j as e,m as s}from"./index-UtCry-5V.js";import{T as i}from"./truck-ZmHuNqcM.js";/**
+import{c as t,j as e,m as s}from"./index-BELbgZ3c.js";import{T as i}from"./truck-r808ZWP0.js";/**
  * @license lucide-react v0.487.0 - ISC
  *
  * This source code is licensed under the ISC license.
