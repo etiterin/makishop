@@ -468,6 +468,43 @@
         "Яркий, сияющий акрил",
         "Подвеска-звездочка"
       ]
+    },
+    {
+      "fandoms": [
+        "Pokemon"
+      ],
+      "price": 200,
+      "name": "Стикеры мордочки рамуне",
+      "inStock": true,
+      "images": [
+        "/images/uploads/img_2361.jpeg",
+        "/images/uploads/img_2362.jpeg"
+      ],
+      "id": 30,
+      "description": "Вытянутый стикерпак с ивилюциями. Покрыт блестящей пленкой со звездочками.",
+      "category": "sticker",
+      "detailsItems": [
+        "Вытянутый стикерлайн с ивилюциями.",
+        "Покрыт блестящей пленкой со звездочками. "
+      ]
+    },
+    {
+      "inStock": true,
+      "id": 31,
+      "name": "Значок Рейн",
+      "price": 250,
+      "category": "badge",
+      "fandoms": [
+        "Animals"
+      ],
+      "images": [
+        "/images/uploads/img_2364.jpeg",
+        "/images/uploads/img_2363.jpeg"
+      ],
+      "detailsItems": [
+        "Значок 37 мм",
+        "Покрыт сияющей сахарной текстурой"
+      ]
     }
   ]
 }
