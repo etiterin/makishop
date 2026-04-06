@@ -553,6 +553,26 @@
         "Блестящая подложка под изображением",
         "44 мм в диаметре"
       ]
+    },
+    {
+      "inStock": true,
+      "id": 34,
+      "name": "Стикерпак лососевый",
+      "price": 150,
+      "category": "sticker",
+      "images": [
+        "/images/uploads/img_2398.jpeg",
+        "/images/uploads/img_2399.jpeg",
+        "/images/uploads/img_2397.jpeg"
+      ],
+      "fandoms": [
+        "Animals"
+      ],
+      "detailsItems": [
+        "9 на 14 сантиметров",
+        "Каждый стикер с индивидуальной резкой",
+        "Сияющее сахарное покрытие"
+      ]
     }
   ]
 }
