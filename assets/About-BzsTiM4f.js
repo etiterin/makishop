@@ -1,4 +1,4 @@
-import{c as o,r as m,j as e,m as i,X as f}from"./index-DpP0WiHa.js";import{I as h,C as y,a as w}from"./ImageWithFallback-DZUItnTg.js";import{M as v}from"./message-circle-DpJ2ccsG.js";/**
+import{c as o,r as m,j as e,m as i,X as f}from"./index-BX6leSL9.js";import{I as h,C as y,a as w}from"./ImageWithFallback-BFKmwhMW.js";import{M as v}from"./message-circle-BF8-XWhF.js";/**
  * @license lucide-react v0.487.0 - ISC
  *
  * This source code is licensed under the ISC license.
