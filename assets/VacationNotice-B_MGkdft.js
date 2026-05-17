@@ -1,0 +1,6 @@
+import{c as r,j as e}from"./index-DGRJMpP0.js";/**
+ * @license lucide-react v0.487.0 - ISC
+ *
+ * This source code is licensed under the ISC license.
+ * See the LICENSE file in the root directory of this source tree.
+ */const n=[["path",{d:"m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3",key:"wmoenq"}],["path",{d:"M12 9v4",key:"juzpu7"}],["path",{d:"M12 17h.01",key:"p32p05"}]],i=r("triangle-alert",n),c="Заказы, оформленные с 28 мая по 16 июня, будут отправлены после 17 июня.",l=Date.parse("2026-05-17T00:00:00+03:00"),m=Date.parse("2026-06-17T00:00:00+03:00");function o(t=new Date){const s=t.getTime();return s>=l&&s<m}function p({text:t=c,forceVisible:s=!1,className:a=""}){return!s&&!o()?null:e.jsx("div",{className:`rounded-3xl border border-amber-300/70 bg-amber-100/80 px-5 py-4 text-amber-950 shadow-sm backdrop-blur-sm ${a}`.trim(),children:e.jsxs("div",{className:"flex items-start gap-3",children:[e.jsx("span",{className:"mt-0.5 inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-amber-200/90 text-amber-900",children:e.jsx(i,{className:"h-5 w-5"})}),e.jsxs("div",{className:"space-y-1",children:[e.jsx("p",{className:"text-sm font-semibold uppercase tracking-[0.18em] text-amber-900/70",children:"Важно"}),e.jsx("p",{className:"text-sm sm:text-base leading-relaxed",children:t})]})]})})}export{p as V};
