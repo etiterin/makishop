@@ -4,6 +4,7 @@ import { AlertCircle, CheckCircle2, Loader2, PackageSearch } from 'lucide-react'
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { getApiBaseUrl } from '../lib/api';
+import { VacationNotice } from '../components/VacationNotice';
 
 type FulfillmentStatus =
   | 'pending_payment'
@@ -27,6 +28,17 @@ type TrackOrderResponse = {
     price: number;
     lineTotal: number;
   }>;
+  pricing: {
+    subtotalRub: number;
+    baseDeliveryRub?: number;
+    deliveryRub: number;
+    deliveryDiscountRub?: number;
+    discountRub: number;
+    totalRub: number;
+    promoCode?: string;
+    promoPercent?: number;
+    freeShippingApplied?: boolean;
+  } | null;
   delivery: {
     mode: 'cdek' | 'russian_post' | 'ozon' | 'yandex';
     label: string;
@@ -43,6 +55,7 @@ type TrackOrderResponse = {
   }>;
   createdAt: string;
   paidAt: string | null;
+  vacationNotice: string | null;
 };
 
 const STATUS_FLOW: FulfillmentStatus[] = [
@@ -155,6 +168,19 @@ export function TrackOrder() {
             lineTotal: Number(item?.lineTotal ?? 0),
           })).filter((item) => item.name && item.quantity > 0)
           : [],
+        pricing: data.pricing
+          ? {
+            subtotalRub: Number(data.pricing.subtotalRub ?? 0),
+            baseDeliveryRub: data.pricing.baseDeliveryRub != null ? Number(data.pricing.baseDeliveryRub) : undefined,
+            deliveryRub: Number(data.pricing.deliveryRub ?? 0),
+            deliveryDiscountRub: data.pricing.deliveryDiscountRub != null ? Number(data.pricing.deliveryDiscountRub) : undefined,
+            discountRub: Number(data.pricing.discountRub ?? 0),
+            totalRub: Number(data.pricing.totalRub ?? 0),
+            promoCode: data.pricing.promoCode ? String(data.pricing.promoCode) : undefined,
+            promoPercent: data.pricing.promoPercent ? Number(data.pricing.promoPercent) : undefined,
+            freeShippingApplied: Boolean(data.pricing.freeShippingApplied),
+          }
+          : null,
         delivery: data.delivery
           ? {
             mode: normalizeDeliveryMode(data.delivery.mode),
@@ -175,6 +201,7 @@ export function TrackOrder() {
           : [],
         createdAt: String(data.createdAt ?? ''),
         paidAt: data.paidAt ? String(data.paidAt) : null,
+        vacationNotice: data.vacationNotice ? String(data.vacationNotice) : null,
       });
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Не удалось загрузить статус заказа';
@@ -301,6 +328,8 @@ export function TrackOrder() {
               </div>
             )}
 
+            {statusData.vacationNotice && <VacationNotice text={statusData.vacationNotice} forceVisible />}
+
             <div className="space-y-2 rounded-2xl border border-border/60 p-4">
               <p className="font-medium">Состав заказа</p>
               {statusData.items.length > 0 ? (
@@ -315,9 +344,38 @@ export function TrackOrder() {
               ) : (
                 <p className="text-sm text-muted-foreground">Состав уточняется.</p>
               )}
-              <p className="text-sm text-muted-foreground">
-                Сумма заказа: <span className="font-medium text-foreground">{statusData.amountRub} ₽</span>
-              </p>
+              <div className="space-y-1 text-sm text-muted-foreground">
+                {statusData.pricing && (
+                  <>
+                    <div className="flex items-center justify-between">
+                      <span>Товары</span>
+                      <span>{statusData.pricing.subtotalRub} ₽</span>
+                    </div>
+                    {statusData.pricing.discountRub > 0 && (
+                      <div className="flex items-center justify-between text-emerald-700 dark:text-emerald-300">
+                        <span>
+                          Промокод {statusData.pricing.promoCode ?? ''}
+                          {statusData.pricing.promoPercent ? ` (-${statusData.pricing.promoPercent}%)` : ''}
+                        </span>
+                        <span>-{statusData.pricing.discountRub} ₽</span>
+                      </div>
+                    )}
+                    <div className="flex items-center justify-between">
+                      <span>Доставка</span>
+                      <span>{(statusData.pricing.baseDeliveryRub ?? statusData.pricing.deliveryRub)} ₽</span>
+                    </div>
+                    {(statusData.pricing.deliveryDiscountRub ?? 0) > 0 && (
+                      <div className="flex items-center justify-between text-emerald-700 dark:text-emerald-300">
+                        <span>Бесплатная доставка по промокоду</span>
+                        <span>-{statusData.pricing.deliveryDiscountRub} ₽</span>
+                      </div>
+                    )}
+                  </>
+                )}
+                <p>
+                  Сумма заказа: <span className="font-medium text-foreground">{statusData.amountRub} ₽</span>
+                </p>
+              </div>
             </div>
 
             {statusData.delivery && (

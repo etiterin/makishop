@@ -56,6 +56,7 @@ type DeliverySelectionPayload = {
 
 type CreateCheckoutPayload = {
   items: CreateCheckoutItem[];
+  promoCode?: string;
   customer?: {
     email?: string;
     name?: string;
@@ -66,6 +67,11 @@ type CreateCheckoutPayload = {
     deliveryMode?: DeliveryMode | string;
     delivery?: DeliverySelectionPayload;
   };
+};
+
+type PromoValidationPayload = {
+  items: CreateCheckoutItem[];
+  promoCode?: string;
 };
 
 type DeliveryQuotePayload = {
@@ -119,6 +125,7 @@ type OrderRecord = {
   amount_rub: string;
   items_json: string;
   customer_json: string | null;
+  pricing_json: string | null;
   status_token: string;
   created_at: string;
   paid_at: string | null;
@@ -164,7 +171,9 @@ type OrderEmailData = {
   amount_rub: string;
   items_json: string;
   customer_json: string | null;
+  pricing_json: string | null;
   status_token: string;
+  created_at: string;
   email_sent_at: string | null;
 };
 
@@ -177,6 +186,18 @@ type OrderCustomer = {
   comment?: string;
   deliveryMode?: DeliveryMode | string;
   delivery?: OrderCustomerDelivery;
+};
+
+type OrderPricing = {
+  subtotalRub: number;
+  baseDeliveryRub?: number;
+  deliveryRub: number;
+  deliveryDiscountRub?: number;
+  discountRub: number;
+  totalRub: number;
+  promoCode?: string;
+  promoPercent?: number;
+  freeShippingApplied?: boolean;
 };
 
 type OrderLineItem = {
@@ -236,6 +257,18 @@ type RateLimitUpsertResult = {
   window_start: number;
 };
 
+type PromoCodeRecord = {
+  code: string;
+  discount_percent: number;
+  single_use: number;
+  is_active: number;
+  free_shipping: number;
+  reserved_at: string | null;
+  reserved_order_id: string | null;
+  used_at: string | null;
+  used_order_id: string | null;
+};
+
 const catalog = new Map<number, CatalogProduct>(
   (productsData.products as CatalogProduct[]).map((product) => [product.id, product]),
 );
@@ -268,9 +301,13 @@ const FIXED_DELIVERY_RATES_RUB: Record<Exclude<DeliveryProvider, "cdek">, number
 const DEFAULT_RECEIPT_TAX: ReceiptTax = "none";
 const RATE_LIMIT_WINDOW_SECONDS = 60;
 const RATE_LIMIT_RETENTION_SECONDS = 60 * 60 * 24;
+const VACATION_DELAY_START_TS = Date.parse("2026-05-28T00:00:00+03:00");
+const VACATION_DELAY_END_TS = Date.parse("2026-06-17T00:00:00+03:00");
+const VACATION_DELAY_NOTICE = "Заказы, оформленные с 28 мая по 16 июня, будут отправлены после 17 июня.";
 const RATE_LIMITS = {
   checkoutCreate: 3,
   deliveryQuotes: 5,
+  promoValidate: 7,
   orderTrack: 7,
 } as const;
 
@@ -421,6 +458,61 @@ function formatAmountFromKopecks(kopecks: number): string {
   return (kopecks / 100).toFixed(2);
 }
 
+function normalizePromoCode(value: string | undefined): string | undefined {
+  const normalized = value?.trim().toUpperCase().replace(/\s+/g, "");
+  if (!normalized) return undefined;
+  return normalized.slice(0, 40);
+}
+
+function calculatePromoDiscountKopecks(subtotalKopecks: number, discountPercent: number): number {
+  if (subtotalKopecks <= 0 || !Number.isFinite(discountPercent) || discountPercent <= 0) {
+    return 0;
+  }
+  return Math.round((subtotalKopecks * discountPercent) / 100);
+}
+
+function buildOrderPricing(args: {
+  subtotalKopecks: number;
+  baseDeliveryKopecks: number;
+  deliveryKopecks: number;
+  deliveryDiscountKopecks?: number;
+  discountKopecks: number;
+  promoCode?: string;
+  promoPercent?: number;
+  freeShippingApplied?: boolean;
+}): OrderPricing {
+  const {
+    subtotalKopecks,
+    baseDeliveryKopecks,
+    deliveryKopecks,
+    deliveryDiscountKopecks = 0,
+    discountKopecks,
+    promoCode,
+    promoPercent,
+    freeShippingApplied = false,
+  } = args;
+  return {
+    subtotalRub: Number((subtotalKopecks / 100).toFixed(2)),
+    baseDeliveryRub: Number((baseDeliveryKopecks / 100).toFixed(2)),
+    deliveryRub: Number((deliveryKopecks / 100).toFixed(2)),
+    deliveryDiscountRub: Number((deliveryDiscountKopecks / 100).toFixed(2)),
+    discountRub: Number((discountKopecks / 100).toFixed(2)),
+    totalRub: Number(((subtotalKopecks - discountKopecks + deliveryKopecks) / 100).toFixed(2)),
+    promoCode,
+    promoPercent,
+    freeShippingApplied,
+  };
+}
+
+function getVacationOrderNotice(createdAt: string | null | undefined): string | null {
+  if (!createdAt) return null;
+  const timestamp = Date.parse(createdAt);
+  if (!Number.isFinite(timestamp)) return null;
+  return timestamp >= VACATION_DELAY_START_TS && timestamp < VACATION_DELAY_END_TS
+    ? VACATION_DELAY_NOTICE
+    : null;
+}
+
 function isValidEmail(value: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
 }
@@ -459,12 +551,73 @@ function sanitizeReceiptItemName(value: string): string {
   return normalized.slice(0, 128) || "Товар";
 }
 
+function buildDiscountedReceiptLines(lineItems: CheckoutLineItem[], discountKopecks: number): Array<{
+  name: string;
+  quantity: number;
+  sumKopecks: number;
+}> {
+  const subtotalKopecks = lineItems.reduce((sum, line) => sum + line.lineKopecks, 0);
+  const normalizedDiscount = Math.max(0, Math.min(discountKopecks, Math.max(0, subtotalKopecks - 1)));
+  if (normalizedDiscount <= 0 || subtotalKopecks <= 0) {
+    return lineItems.map((line) => ({
+      name: line.name,
+      quantity: line.quantity,
+      sumKopecks: line.lineKopecks,
+    }));
+  }
+
+  const allocations = lineItems.map((line, index) => {
+    const rawShare = (normalizedDiscount * line.lineKopecks) / subtotalKopecks;
+    const baseShare = Math.min(line.lineKopecks, Math.floor(rawShare));
+    return {
+      index,
+      remainder: rawShare - baseShare,
+      discountShare: baseShare,
+    };
+  });
+
+  let distributed = allocations.reduce((sum, item) => sum + item.discountShare, 0);
+  let remaining = normalizedDiscount - distributed;
+
+  allocations
+    .slice()
+    .sort((a, b) => b.remainder - a.remainder)
+    .forEach((item) => {
+      if (remaining <= 0) return;
+      const line = lineItems[item.index];
+      if (line.lineKopecks > item.discountShare) {
+        item.discountShare += 1;
+        distributed += 1;
+        remaining -= 1;
+      }
+    });
+
+  if (distributed < normalizedDiscount) {
+    for (const item of allocations) {
+      if (distributed >= normalizedDiscount) break;
+      const line = lineItems[item.index];
+      const available = line.lineKopecks - item.discountShare;
+      if (available <= 0) continue;
+      const extra = Math.min(available, normalizedDiscount - distributed);
+      item.discountShare += extra;
+      distributed += extra;
+    }
+  }
+
+  return lineItems.map((line, index) => ({
+    name: line.name,
+    quantity: line.quantity,
+    sumKopecks: Math.max(0, line.lineKopecks - allocations[index].discountShare),
+  })).filter((line) => line.sumKopecks > 0);
+}
+
 function buildRobokassaReceipt(args: {
   lineItems: CheckoutLineItem[];
   delivery?: OrderCustomerDelivery;
+  discountKopecks?: number;
   tax: ReceiptTax;
 }): string {
-  const { lineItems, delivery, tax } = args;
+  const { lineItems, delivery, discountKopecks = 0, tax } = args;
   const items: Array<{
     name: string;
     quantity: number;
@@ -474,12 +627,12 @@ function buildRobokassaReceipt(args: {
     payment_object: "commodity" | "service";
   }> = [];
 
-  for (const line of lineItems) {
-    if (line.lineKopecks <= 0 || line.quantity <= 0) continue;
+  for (const line of buildDiscountedReceiptLines(lineItems, discountKopecks)) {
+    if (line.sumKopecks <= 0 || line.quantity <= 0) continue;
     items.push({
       name: sanitizeReceiptItemName(line.name),
       quantity: line.quantity,
-      sum: Number((line.lineKopecks / 100).toFixed(2)),
+      sum: Number((line.sumKopecks / 100).toFixed(2)),
       tax,
       payment_method: "full_payment",
       payment_object: "commodity",
@@ -574,6 +727,40 @@ function parseCustomer(raw: string | null): OrderCustomer | null {
       typeof parsed.deliveryMode === "string" ? parsed.deliveryMode : undefined,
     ),
     delivery,
+  };
+}
+
+function parseOrderPricing(raw: string | null): OrderPricing | null {
+  const parsed = parseJsonObject<Partial<OrderPricing>>(raw);
+  if (!parsed || typeof parsed !== "object") return null;
+
+  const subtotalRub = Number(parsed.subtotalRub ?? NaN);
+  const baseDeliveryRub = Number(parsed.baseDeliveryRub ?? parsed.deliveryRub ?? NaN);
+  const deliveryRub = Number(parsed.deliveryRub ?? NaN);
+  const deliveryDiscountRub = Number(parsed.deliveryDiscountRub ?? 0);
+  const discountRub = Number(parsed.discountRub ?? NaN);
+  const totalRub = Number(parsed.totalRub ?? NaN);
+  const promoPercent = parsed.promoPercent == null ? undefined : Number(parsed.promoPercent);
+
+  if (!Number.isFinite(subtotalRub) || subtotalRub < 0
+    || !Number.isFinite(baseDeliveryRub) || baseDeliveryRub < 0
+    || !Number.isFinite(deliveryRub) || deliveryRub < 0
+    || !Number.isFinite(deliveryDiscountRub) || deliveryDiscountRub < 0
+    || !Number.isFinite(discountRub) || discountRub < 0
+    || !Number.isFinite(totalRub) || totalRub < 0) {
+    return null;
+  }
+
+  return {
+    subtotalRub,
+    baseDeliveryRub,
+    deliveryRub,
+    deliveryDiscountRub,
+    discountRub,
+    totalRub,
+    promoCode: normalizePromoCode(typeof parsed.promoCode === "string" ? parsed.promoCode : undefined),
+    promoPercent: promoPercent != null && Number.isFinite(promoPercent) && promoPercent > 0 ? promoPercent : undefined,
+    freeShippingApplied: Boolean(parsed.freeShippingApplied),
   };
 }
 
@@ -689,6 +876,24 @@ function formatTelegramItems(items: OrderLineItem[]): string {
   return lines.join("\n");
 }
 
+function buildOrderPricingLines(pricing: OrderPricing | null): string[] {
+  if (!pricing) return [];
+
+  const lines = [`Товары: ${formatRub(pricing.subtotalRub)}`];
+  if (pricing.discountRub > 0) {
+    const promoLabel = pricing.promoCode
+      ? `Промокод ${pricing.promoCode}${pricing.promoPercent ? ` (-${pricing.promoPercent}%)` : ""}`
+      : "Скидка";
+    lines.push(`${promoLabel}: -${formatRub(pricing.discountRub)}`);
+  }
+  lines.push(`Доставка: ${formatRub(pricing.baseDeliveryRub ?? pricing.deliveryRub)}`);
+  if ((pricing.deliveryDiscountRub ?? 0) > 0) {
+    lines.push(`Бесплатная доставка по промокоду: -${formatRub(pricing.deliveryDiscountRub ?? 0)}`);
+  }
+  lines.push(`Итого: ${formatRub(pricing.totalRub)}`);
+  return lines;
+}
+
 function buildTelegramOrderMessage(args: {
   title: string;
   env: Env;
@@ -699,7 +904,9 @@ function buildTelegramOrderMessage(args: {
   fulfillmentStatus: FulfillmentStatus;
   items: OrderLineItem[];
   customer: OrderCustomer | null;
+  pricing: OrderPricing | null;
   statusToken: string;
+  createdAt: string;
 }): string {
   const {
     title,
@@ -711,11 +918,14 @@ function buildTelegramOrderMessage(args: {
     fulfillmentStatus,
     items,
     customer,
+    pricing,
     statusToken,
+    createdAt,
   } = args;
 
   const paymentLabel = paymentStatus === "paid" ? "Оплачено" : "Ожидает оплату";
   const trackingUrl = buildTrackingUrl(env, orderId, statusToken);
+  const vacationNotice = getVacationOrderNotice(createdAt);
   const customerLines: string[] = [];
   if (customer?.email) customerLines.push(`Email: ${customer.email}`);
   if (customer?.name) customerLines.push(`Имя: ${customer.name}`);
@@ -739,11 +949,20 @@ function buildTelegramOrderMessage(args: {
     formatTelegramItems(items),
   ];
 
+  const pricingLines = buildOrderPricingLines(pricing);
+  if (pricingLines.length > 0) {
+    lines.push("", "Расчет:", ...pricingLines);
+  }
+
   lines.push("", "Контакты заказчика:");
   if (customerLines.length > 0) {
     lines.push(...customerLines);
   } else {
     lines.push("- не указаны");
+  }
+
+  if (vacationNotice) {
+    lines.push("", `Важно: ${vacationNotice}`);
   }
 
   lines.push("", `Трекинг: ${trackingUrl}`);
@@ -835,7 +1054,8 @@ function escapeHtml(value: string): string {
 function formatRub(value: number | string): string {
   const amount = typeof value === "string" ? Number(value) : value;
   if (!Number.isFinite(amount)) return "0 ₽";
-  return `${amount.toFixed(0)} ₽`;
+  const rounded = Number(amount.toFixed(2));
+  return Number.isInteger(rounded) ? `${rounded.toFixed(0)} ₽` : `${rounded.toFixed(2)} ₽`;
 }
 
 function buildOrderEmailHtml(args: {
@@ -843,10 +1063,13 @@ function buildOrderEmailHtml(args: {
   amountRub: string;
   items: OrderLineItem[];
   customer: OrderCustomer | null;
+  pricing: OrderPricing | null;
   trackingUrl: string;
+  createdAt: string;
 }): string {
-  const { invId, amountRub, items, customer, trackingUrl } = args;
+  const { invId, amountRub, items, customer, pricing, trackingUrl, createdAt } = args;
   const deliveryText = formatDeliverySummary(customer);
+  const vacationNotice = getVacationOrderNotice(createdAt);
   const rows = items.length > 0
     ? items
       .map((item) => {
@@ -902,6 +1125,27 @@ function buildOrderEmailHtml(args: {
       <div class="chip" style="margin-top: 18px; padding: 14px; background: #f3f4f6; border: 1px solid #e5e7eb; border-radius: 10px;">
         <p class="item-muted" style="margin: 0 0 8px; color: #4b5563; font-size: 13px; font-weight: 600;">Данные заказа</p>
         ${customerBlocks.join("")}
+      </div>
+    `
+    : "";
+
+  const pricingRows = buildOrderPricingLines(pricing)
+    .map((line) => `<p class="item-name" style="margin: 0 0 4px; color: #1f2937; font-size: 14px;">${escapeHtml(line)}</p>`)
+    .join("");
+
+  const pricingDetails = pricingRows
+    ? `
+      <div class="chip" style="margin-top: 18px; padding: 14px; background: #f3f4f6; border: 1px solid #e5e7eb; border-radius: 10px;">
+        <p class="item-muted" style="margin: 0 0 8px; color: #4b5563; font-size: 13px; font-weight: 600;">Расчет заказа</p>
+        ${pricingRows}
+      </div>
+    `
+    : "";
+
+  const vacationBlock = vacationNotice
+    ? `
+      <div class="chip" style="margin-top: 18px; padding: 14px; background: #fff7ed; border: 1px solid #fdba74; border-radius: 10px;">
+        <p class="item-name" style="margin: 0; color: #9a3412; font-size: 14px; font-weight: 600;">Важно: ${escapeHtml(vacationNotice)}</p>
       </div>
     `
     : "";
@@ -1030,7 +1274,9 @@ function buildOrderEmailHtml(args: {
                   <p class="title" style="margin: 0; color: #111827; font-size: 16px; font-weight: 700;">
                     Итого: ${escapeHtml(formatRub(amountRub))}
                   </p>
+                  ${pricingDetails}
                   ${customerDetails}
+                  ${vacationBlock}
                 </td>
               </tr>
               <tr>
@@ -1139,6 +1385,85 @@ function isMissingColumnError(error: unknown, columnName: string): boolean {
     || message.includes(`has no column named ${normalizedColumn}`);
 }
 
+function isMissingTableError(error: unknown, tableName: string): boolean {
+  const message = String((error as Error)?.message ?? error).toLowerCase();
+  return message.includes(`no such table: ${tableName.toLowerCase()}`);
+}
+
+async function loadPromoCodeRecord(env: Env, promoCode: string): Promise<PromoCodeRecord | null> {
+  try {
+    return await env.DB.prepare(
+      `SELECT code, discount_percent, single_use, is_active, free_shipping, reserved_at, reserved_order_id, used_at, used_order_id
+       FROM promo_codes
+       WHERE code = ?
+       LIMIT 1`,
+    )
+      .bind(promoCode)
+      .first<PromoCodeRecord>();
+  } catch (error) {
+    if (!isMissingColumnError(error, "free_shipping")) {
+      throw error;
+    }
+
+    const legacyRecord = await env.DB.prepare(
+      `SELECT code, discount_percent, single_use, is_active, reserved_at, reserved_order_id, used_at, used_order_id
+       FROM promo_codes
+       WHERE code = ?
+       LIMIT 1`,
+    )
+      .bind(promoCode)
+      .first<Omit<PromoCodeRecord, "free_shipping">>();
+
+    return legacyRecord ? { ...legacyRecord, free_shipping: 0 } : null;
+  }
+}
+
+async function reservePromoCode(env: Env, promoCode: string, orderId: string): Promise<boolean> {
+  const now = nowIso();
+  const result = await env.DB.prepare(
+    `UPDATE promo_codes
+     SET reserved_at = ?, reserved_order_id = ?, updated_at = ?
+     WHERE code = ?
+       AND is_active = 1
+       AND used_at IS NULL
+       AND (single_use = 0 OR reserved_order_id IS NULL)`,
+  )
+    .bind(now, orderId, now, promoCode)
+    .run();
+
+  return Number(result.meta.changes ?? 0) > 0;
+}
+
+async function markPromoCodeUsed(env: Env, promoCode: string, orderId: string): Promise<boolean> {
+  const now = nowIso();
+  const result = await env.DB.prepare(
+    `UPDATE promo_codes
+     SET used_at = ?, used_order_id = ?, reserved_at = NULL, reserved_order_id = NULL, updated_at = ?
+     WHERE code = ?
+       AND is_active = 1
+       AND used_at IS NULL
+       AND (reserved_order_id = ? OR reserved_order_id IS NULL)`,
+  )
+    .bind(now, orderId, now, promoCode, orderId)
+    .run();
+
+  return Number(result.meta.changes ?? 0) > 0;
+}
+
+async function deletePendingOrder(env: Env, orderId: string): Promise<void> {
+  await env.DB.prepare("DELETE FROM orders WHERE id = ? AND status = 'pending_payment'")
+    .bind(orderId)
+    .run();
+}
+
+function isPromoCodeAvailable(record: PromoCodeRecord | null): record is PromoCodeRecord {
+  if (!record) return false;
+  if (record.is_active !== 1) return false;
+  if (record.used_at) return false;
+  if (record.single_use === 1 && record.reserved_order_id) return false;
+  return Number.isFinite(Number(record.discount_percent)) && Number(record.discount_percent) >= 1 && Number(record.discount_percent) <= 99;
+}
+
 async function loadOrderByInvId(env: Env, invId: number): Promise<DbOrder | null> {
   try {
     return await env.DB.prepare(
@@ -1169,15 +1494,33 @@ async function loadOrderByInvId(env: Env, invId: number): Promise<DbOrder | null
 }
 
 async function loadOrderRecordById(env: Env, orderId: string): Promise<OrderRecord | null> {
-  return await env.DB.prepare(
-    `SELECT id, inv_id, status, fulfillment_status, fulfillment_status_updated_at,
-            amount_rub, items_json, customer_json, status_token, created_at, paid_at
-     FROM orders
-     WHERE id = ?
-     LIMIT 1`,
-  )
-    .bind(orderId)
-    .first<OrderRecord>();
+  try {
+    return await env.DB.prepare(
+      `SELECT id, inv_id, status, fulfillment_status, fulfillment_status_updated_at,
+              amount_rub, items_json, customer_json, pricing_json, status_token, created_at, paid_at
+       FROM orders
+       WHERE id = ?
+       LIMIT 1`,
+    )
+      .bind(orderId)
+      .first<OrderRecord>();
+  } catch (error) {
+    if (!isMissingColumnError(error, "pricing_json")) {
+      throw error;
+    }
+
+    const legacyOrder = await env.DB.prepare(
+      `SELECT id, inv_id, status, fulfillment_status, fulfillment_status_updated_at,
+              amount_rub, items_json, customer_json, status_token, created_at, paid_at
+       FROM orders
+       WHERE id = ?
+       LIMIT 1`,
+    )
+      .bind(orderId)
+      .first<Omit<OrderRecord, "pricing_json">>();
+
+    return legacyOrder ? { ...legacyOrder, pricing_json: null } : null;
+  }
 }
 
 async function loadOrderRecordByIdentifier(env: Env, identifier: string): Promise<OrderRecord | null> {
@@ -1193,15 +1536,33 @@ async function loadOrderRecordByIdentifier(env: Env, identifier: string): Promis
     return null;
   }
 
-  return await env.DB.prepare(
-    `SELECT id, inv_id, status, fulfillment_status, fulfillment_status_updated_at,
-            amount_rub, items_json, customer_json, status_token, created_at, paid_at
-     FROM orders
-     WHERE inv_id = ?
-     LIMIT 1`,
-  )
-    .bind(Number(normalized))
-    .first<OrderRecord>();
+  try {
+    return await env.DB.prepare(
+      `SELECT id, inv_id, status, fulfillment_status, fulfillment_status_updated_at,
+              amount_rub, items_json, customer_json, pricing_json, status_token, created_at, paid_at
+       FROM orders
+       WHERE inv_id = ?
+       LIMIT 1`,
+    )
+      .bind(Number(normalized))
+      .first<OrderRecord>();
+  } catch (error) {
+    if (!isMissingColumnError(error, "pricing_json")) {
+      throw error;
+    }
+
+    const legacyOrder = await env.DB.prepare(
+      `SELECT id, inv_id, status, fulfillment_status, fulfillment_status_updated_at,
+              amount_rub, items_json, customer_json, status_token, created_at, paid_at
+       FROM orders
+       WHERE inv_id = ?
+       LIMIT 1`,
+    )
+      .bind(Number(normalized))
+      .first<Omit<OrderRecord, "pricing_json">>();
+
+    return legacyOrder ? { ...legacyOrder, pricing_json: null } : null;
+  }
 }
 
 async function updateOrderFulfillmentStatus(env: Env, orderId: string, nextStatus: FulfillmentStatus): Promise<{
@@ -1288,17 +1649,17 @@ async function markOrderPaid(env: Env, orderId: string, paymentMode: RoboMode): 
 async function loadOrderEmailData(env: Env, invId: number): Promise<OrderEmailData | null> {
   try {
     return await env.DB.prepare(
-      "SELECT id, inv_id, amount_rub, items_json, customer_json, status_token, email_sent_at FROM orders WHERE inv_id = ? LIMIT 1",
+      "SELECT id, inv_id, amount_rub, items_json, customer_json, pricing_json, status_token, created_at, email_sent_at FROM orders WHERE inv_id = ? LIMIT 1",
     )
       .bind(invId)
       .first<OrderEmailData>();
   } catch (error) {
-    if (!isMissingColumnError(error, "email_sent_at")) {
+    if (!isMissingColumnError(error, "email_sent_at") && !isMissingColumnError(error, "pricing_json")) {
       throw error;
     }
 
     const legacyOrder = await env.DB.prepare(
-      "SELECT id, inv_id, amount_rub, items_json, customer_json, status_token FROM orders WHERE inv_id = ? LIMIT 1",
+      "SELECT id, inv_id, amount_rub, items_json, customer_json, status_token, created_at FROM orders WHERE inv_id = ? LIMIT 1",
     )
       .bind(invId)
       .first<{
@@ -1308,6 +1669,7 @@ async function loadOrderEmailData(env: Env, invId: number): Promise<OrderEmailDa
         items_json: string;
         customer_json: string | null;
         status_token: string;
+        created_at: string;
       }>();
 
     if (!legacyOrder) {
@@ -1316,6 +1678,7 @@ async function loadOrderEmailData(env: Env, invId: number): Promise<OrderEmailDa
 
     return {
       ...legacyOrder,
+      pricing_json: null,
       email_sent_at: null,
     };
   }
@@ -1349,6 +1712,7 @@ async function sendOrderPaidEmail(env: Env, order: OrderEmailData): Promise<bool
   }
 
   const customer = parseCustomer(order.customer_json);
+  const pricing = parseOrderPricing(order.pricing_json);
   const customerEmail = customer?.email?.trim().toLowerCase() ?? "";
   if (!isValidEmail(customerEmail)) {
     return false;
@@ -1371,6 +1735,11 @@ async function sendOrderPaidEmail(env: Env, order: OrderEmailData): Promise<bool
     `Отследить заказ: ${trackingUrl}`,
   ];
 
+  const pricingLines = buildOrderPricingLines(pricing);
+  if (pricingLines.length > 0) {
+    textParts.splice(4, 0, "Расчет заказа:", ...pricingLines, "");
+  }
+
   if (customer?.name) {
     textParts.push(`Имя: ${customer.name}`);
   }
@@ -1387,6 +1756,11 @@ async function sendOrderPaidEmail(env: Env, order: OrderEmailData): Promise<bool
     textParts.push(`Комментарий: ${customer.comment}`);
   }
 
+  const orderVacationNotice = getVacationOrderNotice(order.created_at);
+  if (orderVacationNotice) {
+    textParts.push(`Важно: ${orderVacationNotice}`);
+  }
+
   textParts.push("", "Спасибо за заказ!");
 
   const html = buildOrderEmailHtml({
@@ -1394,7 +1768,9 @@ async function sendOrderPaidEmail(env: Env, order: OrderEmailData): Promise<bool
     amountRub: order.amount_rub,
     items,
     customer,
+    pricing,
     trackingUrl,
+    createdAt: order.created_at,
   });
 
   const bcc = env.ORDERS_NOTIFICATION_EMAIL?.trim();
@@ -1660,6 +2036,67 @@ async function handleDeliveryQuotes(request: Request, env: Env): Promise<Respons
   });
 }
 
+async function handleValidatePromoCode(request: Request, env: Env): Promise<Response> {
+  let payload: PromoValidationPayload;
+  try {
+    payload = await request.json<PromoValidationPayload>();
+  } catch {
+    return badRequest(request, env, "Некорректный JSON");
+  }
+
+  if (!payload?.items || !Array.isArray(payload.items) || payload.items.length === 0) {
+    return badRequest(request, env, "Корзина пуста");
+  }
+
+  const promoCode = normalizePromoCode(payload.promoCode);
+  if (!promoCode) {
+    return badRequest(request, env, "Введите промокод");
+  }
+
+  const merged = new Map<number, number>();
+  for (const item of payload.items) {
+    if (!Number.isInteger(item.id) || !Number.isInteger(item.quantity) || item.quantity < 1 || item.quantity > 99) {
+      return badRequest(request, env, "Некорректные позиции корзины");
+    }
+    merged.set(item.id, (merged.get(item.id) ?? 0) + item.quantity);
+  }
+
+  let subtotalKopecks = 0;
+  for (const [id, quantity] of merged.entries()) {
+    const product = catalog.get(id);
+    if (!product) {
+      return badRequest(request, env, `Товар с id=${id} не найден`);
+    }
+    if (!product.inStock) {
+      return jsonResponse(request, env, { error: `Товар "${product.name}" сейчас не в наличии` }, 409);
+    }
+    subtotalKopecks += toKopecks(product.price) * quantity;
+  }
+
+  try {
+    const promo = await loadPromoCodeRecord(env, promoCode);
+    if (!isPromoCodeAvailable(promo)) {
+      return jsonResponse(request, env, { error: "Промокод не найден, уже использован или временно недоступен" }, 404);
+    }
+
+    const discountPercent = Number(promo.discount_percent);
+    const discountKopecks = calculatePromoDiscountKopecks(subtotalKopecks, discountPercent);
+    return jsonResponse(request, env, {
+      code: promo.code,
+      discountPercent,
+      discountRub: Number((discountKopecks / 100).toFixed(2)),
+      subtotalRub: Number((subtotalKopecks / 100).toFixed(2)),
+      freeShipping: promo.free_shipping === 1,
+    });
+  } catch (error) {
+    if (isMissingTableError(error, "promo_codes")) {
+      return jsonResponse(request, env, { error: "Промокоды еще не настроены на сервере" }, 503);
+    }
+    console.error("Promo validation failed", error);
+    return jsonResponse(request, env, { error: "Не удалось проверить промокод" }, 500);
+  }
+}
+
 async function handleCreateCheckout(request: Request, env: Env, executionContext: ExecutionContext): Promise<Response> {
   let payload: CreateCheckoutPayload;
   try {
@@ -1672,6 +2109,7 @@ async function handleCreateCheckout(request: Request, env: Env, executionContext
     return badRequest(request, env, "Корзина пуста");
   }
 
+  const normalizedPromoCode = normalizePromoCode(payload.promoCode);
   const normalizedEmail = payload.customer?.email?.trim().toLowerCase() ?? "";
   if (!normalizedEmail || !isValidEmail(normalizedEmail)) {
     return badRequest(request, env, "Укажите корректный email для отправки чека");
@@ -1700,7 +2138,7 @@ async function handleCreateCheckout(request: Request, env: Env, executionContext
   }
 
   const lineItems: CheckoutLineItem[] = [];
-  let totalKopecks = 0;
+  let subtotalKopecks = 0;
 
   for (const [id, quantity] of merged.entries()) {
     const product = catalog.get(id);
@@ -1711,7 +2149,7 @@ async function handleCreateCheckout(request: Request, env: Env, executionContext
       return jsonResponse(request, env, { error: `Товар "${product.name}" сейчас не в наличии` }, 409);
     }
     const lineKopecks = toKopecks(product.price) * quantity;
-    totalKopecks += lineKopecks;
+    subtotalKopecks += lineKopecks;
     lineItems.push({
       id,
       name: product.name,
@@ -1721,10 +2159,10 @@ async function handleCreateCheckout(request: Request, env: Env, executionContext
     });
   }
 
-  if (totalKopecks <= 0) {
+  if (subtotalKopecks <= 0) {
     return badRequest(request, env, "Сумма заказа должна быть больше нуля");
   }
-  const subtotalRub = totalKopecks / 100;
+  const subtotalRub = subtotalKopecks / 100;
   const normalizedLegacyContact = sanitizeText(payload.customer?.contact, 80);
   const normalizedPhone = sanitizeText(payload.customer?.phone, 80) ?? normalizedLegacyContact;
   const normalizedTelegram = sanitizeText(payload.customer?.telegram, 80);
@@ -1735,6 +2173,7 @@ async function handleCreateCheckout(request: Request, env: Env, executionContext
   }
 
   let selectedDelivery: OrderCustomerDelivery | undefined;
+  let baseDeliveryKopecks = 0;
   {
     const destinationCity = sanitizeText(payload.customer?.delivery?.destinationCity, 80);
     const destinationPostalCodeRaw = payload.customer?.delivery?.destinationPostalCode?.trim();
@@ -1775,7 +2214,7 @@ async function handleCreateCheckout(request: Request, env: Env, executionContext
       return badRequest(request, env, "Для Ozon и Яндекс доставки укажите адрес пункта выдачи");
     }
 
-    totalKopecks += toKopecks(selectedOption.amountRub);
+    baseDeliveryKopecks = toKopecks(selectedOption.amountRub);
     selectedDelivery = {
       mode: selectedOption.mode,
       destinationCity,
@@ -1788,6 +2227,58 @@ async function handleCreateCheckout(request: Request, env: Env, executionContext
       etaMaxDays: selectedOption.etaMaxDays,
     };
   }
+
+  let appliedPromo: { code: string; discountPercent: number; discountKopecks: number; freeShipping: boolean } | null = null;
+  if (normalizedPromoCode) {
+    let promoRecord: PromoCodeRecord | null = null;
+    try {
+      promoRecord = await loadPromoCodeRecord(env, normalizedPromoCode);
+    } catch (error) {
+      if (isMissingTableError(error, "promo_codes")) {
+        return jsonResponse(request, env, { error: "Промокоды еще не настроены на сервере" }, 503);
+      }
+      console.error("Failed to load promo code", error);
+      return jsonResponse(request, env, { error: "Не удалось проверить промокод" }, 500);
+    }
+
+    if (!isPromoCodeAvailable(promoRecord)) {
+      return jsonResponse(request, env, { error: "Промокод не найден, уже использован или временно недоступен" }, 409);
+    }
+
+    const discountPercent = Number(promoRecord.discount_percent);
+    appliedPromo = {
+      code: promoRecord.code,
+      discountPercent,
+      discountKopecks: calculatePromoDiscountKopecks(subtotalKopecks, discountPercent),
+      freeShipping: promoRecord.free_shipping === 1,
+    };
+  }
+
+  const deliveryDiscountKopecks = appliedPromo?.freeShipping ? baseDeliveryKopecks : 0;
+  const deliveryKopecks = Math.max(0, baseDeliveryKopecks - deliveryDiscountKopecks);
+  const discountKopecks = appliedPromo?.discountKopecks ?? 0;
+  const totalKopecks = subtotalKopecks + deliveryKopecks - discountKopecks;
+  if (totalKopecks <= 0) {
+    return badRequest(request, env, "Сумма заказа после скидки должна быть больше нуля");
+  }
+
+  if (selectedDelivery) {
+    selectedDelivery = {
+      ...selectedDelivery,
+      amountRub: Number((deliveryKopecks / 100).toFixed(2)),
+    };
+  }
+
+  const pricing = buildOrderPricing({
+    subtotalKopecks,
+    baseDeliveryKopecks,
+    deliveryKopecks,
+    deliveryDiscountKopecks,
+    discountKopecks,
+    promoCode: appliedPromo?.code,
+    promoPercent: appliedPromo?.discountPercent,
+    freeShippingApplied: appliedPromo?.freeShipping === true,
+  });
 
   const normalizedCustomer: OrderCustomer = {
     email: normalizedEmail,
@@ -1804,16 +2295,95 @@ async function handleCreateCheckout(request: Request, env: Env, executionContext
   const statusToken = generateStatusToken();
   const createdAt = nowIso();
   const amountRub = formatAmountFromKopecks(totalKopecks);
+  const pricingJson = JSON.stringify(pricing);
 
+  let receiptJson = "";
+  try {
+    receiptJson = buildRobokassaReceipt({
+      lineItems,
+      delivery: selectedDelivery,
+      discountKopecks,
+      tax: normalizeReceiptTax(env.ROBO_RECEIPT_TAX),
+    });
+  } catch (error) {
+    console.error("Failed to build receipt", error);
+    return jsonResponse(request, env, { error: "Не удалось сформировать чек для оплаты" }, 500);
+  }
+
+  const receiptEncoded = encodeURIComponent(receiptJson);
+
+  const successUrl2 = env.ROBO_SUCCESS_URL?.trim();
+  const failUrl2 = env.ROBO_FAIL_URL?.trim();
   let invId = 0;
+
+  const signatureParts = [
+    roboConfig.merchantLogin,
+    amountRub,
+    String(invId),
+    receiptEncoded,
+  ];
+
+  // SuccessUrl2/FailUrl2 must be included in signature when they are sent.
+  if (successUrl2) {
+    signatureParts.push(successUrl2, "GET");
+  }
+  if (failUrl2) {
+    signatureParts.push(failUrl2, "GET");
+  }
+  signatureParts.push(roboConfig.pass1);
+
+  const paymentParams = new URLSearchParams({
+    MerchantLogin: roboConfig.merchantLogin,
+    OutSum: amountRub,
+    InvId: "",
+    Description: `Оплата заказа ${orderId.slice(0, 8)}`,
+    SignatureValue: "",
+    Culture: "ru",
+    Encoding: "UTF-8",
+  });
+
+  if (roboConfig.isTest) {
+    paymentParams.set("IsTest", "1");
+  }
+  paymentParams.set("Email", normalizedEmail);
+  if (successUrl2) {
+    paymentParams.set("SuccessUrl2", successUrl2);
+    paymentParams.set("SuccessUrl2Method", "GET");
+  }
+  if (failUrl2) {
+    paymentParams.set("FailUrl2", failUrl2);
+    paymentParams.set("FailUrl2Method", "GET");
+  }
+
   let inserted = false;
-  let useLegacySchema = false;
+  let useLegacyPaymentMode = false;
+  let useLegacyPricing = false;
   let lastError: unknown = null;
 
   for (let attempt = 0; attempt < 5; attempt += 1) {
     invId = generateInvId();
     try {
-      if (!useLegacySchema) {
+      if (!useLegacyPaymentMode && !useLegacyPricing) {
+        await env.DB.prepare(
+          `INSERT INTO orders (id, inv_id, status, fulfillment_status, fulfillment_status_updated_at, payment_mode, amount_kopecks, amount_rub, items_json, customer_json, pricing_json, status_token, created_at, updated_at)
+           VALUES (?, ?, 'pending_payment', 'pending_payment', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        )
+          .bind(
+            orderId,
+            invId,
+            createdAt,
+            paymentMode,
+            totalKopecks,
+            amountRub,
+            JSON.stringify(lineItems),
+            JSON.stringify(normalizedCustomer),
+            pricingJson,
+            statusToken,
+            createdAt,
+            createdAt,
+          )
+          .run();
+      } else if (!useLegacyPaymentMode && useLegacyPricing) {
         await env.DB.prepare(
           `INSERT INTO orders (id, inv_id, status, fulfillment_status, fulfillment_status_updated_at, payment_mode, amount_kopecks, amount_rub, items_json, customer_json, status_token, created_at, updated_at)
            VALUES (?, ?, 'pending_payment', 'pending_payment', ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
@@ -1827,6 +2397,25 @@ async function handleCreateCheckout(request: Request, env: Env, executionContext
             amountRub,
             JSON.stringify(lineItems),
             JSON.stringify(normalizedCustomer),
+            statusToken,
+            createdAt,
+            createdAt,
+          )
+          .run();
+      } else if (useLegacyPaymentMode && !useLegacyPricing) {
+        await env.DB.prepare(
+          `INSERT INTO orders (id, inv_id, status, fulfillment_status, fulfillment_status_updated_at, amount_kopecks, amount_rub, items_json, customer_json, pricing_json, status_token, created_at, updated_at)
+           VALUES (?, ?, 'pending_payment', 'pending_payment', ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        )
+          .bind(
+            orderId,
+            invId,
+            createdAt,
+            totalKopecks,
+            amountRub,
+            JSON.stringify(lineItems),
+            JSON.stringify(normalizedCustomer),
+            pricingJson,
             statusToken,
             createdAt,
             createdAt,
@@ -1855,8 +2444,13 @@ async function handleCreateCheckout(request: Request, env: Env, executionContext
       inserted = true;
       break;
     } catch (error) {
-      if (!useLegacySchema && isMissingColumnError(error, "payment_mode")) {
-        useLegacySchema = true;
+      if (!useLegacyPaymentMode && isMissingColumnError(error, "payment_mode")) {
+        useLegacyPaymentMode = true;
+        attempt -= 1;
+        continue;
+      }
+      if (!useLegacyPricing && isMissingColumnError(error, "pricing_json")) {
+        useLegacyPricing = true;
         attempt -= 1;
         continue;
       }
@@ -1868,6 +2462,23 @@ async function handleCreateCheckout(request: Request, env: Env, executionContext
   if (!inserted) {
     console.error("Failed to create order", lastError);
     return jsonResponse(request, env, { error: "Не удалось создать заказ, попробуйте еще раз" }, 500);
+  }
+
+  if (appliedPromo) {
+    try {
+      const reserved = await reservePromoCode(env, appliedPromo.code, orderId);
+      if (!reserved) {
+        await deletePendingOrder(env, orderId);
+        return jsonResponse(request, env, { error: "Промокод только что заняли. Попробуйте другой код." }, 409);
+      }
+    } catch (error) {
+      await deletePendingOrder(env, orderId);
+      if (isMissingTableError(error, "promo_codes")) {
+        return jsonResponse(request, env, { error: "Промокоды еще не настроены на сервере" }, 503);
+      }
+      console.error("Failed to reserve promo code", error);
+      return jsonResponse(request, env, { error: "Не удалось применить промокод" }, 500);
+    }
   }
 
   if (isTelegramConfigured(env)) {
@@ -1886,68 +2497,17 @@ async function handleCreateCheckout(request: Request, env: Env, executionContext
       fulfillmentStatus: "pending_payment",
       items: telegramItems,
       customer: normalizedCustomer,
+      pricing,
       statusToken,
+      createdAt,
     });
     executionContext.waitUntil(notifyTelegramTargets(env, message));
   }
 
-  let receiptJson = "";
-  try {
-    receiptJson = buildRobokassaReceipt({
-      lineItems,
-      delivery: selectedDelivery,
-      tax: normalizeReceiptTax(env.ROBO_RECEIPT_TAX),
-    });
-  } catch (error) {
-    console.error("Failed to build receipt", error);
-    return jsonResponse(request, env, { error: "Не удалось сформировать чек для оплаты" }, 500);
-  }
-
-  const receiptEncoded = encodeURIComponent(receiptJson);
-
-  const successUrl2 = env.ROBO_SUCCESS_URL?.trim();
-  const failUrl2 = env.ROBO_FAIL_URL?.trim();
-
-  const signatureParts = [
-    roboConfig.merchantLogin,
-    amountRub,
-    String(invId),
-    receiptEncoded,
-  ];
-
-  // SuccessUrl2/FailUrl2 must be included in signature when they are sent.
-  if (successUrl2) {
-    signatureParts.push(successUrl2, "GET");
-  }
-  if (failUrl2) {
-    signatureParts.push(failUrl2, "GET");
-  }
-  signatureParts.push(roboConfig.pass1);
-
+  signatureParts[2] = String(invId);
   const signature = md5Hex(signatureParts.join(":"));
-
-  const paymentParams = new URLSearchParams({
-    MerchantLogin: roboConfig.merchantLogin,
-    OutSum: amountRub,
-    InvId: String(invId),
-    Description: `Оплата заказа ${orderId.slice(0, 8)}`,
-    SignatureValue: signature,
-    Culture: "ru",
-    Encoding: "UTF-8",
-  });
-
-  if (roboConfig.isTest) {
-    paymentParams.set("IsTest", "1");
-  }
-  paymentParams.set("Email", normalizedEmail);
-  if (successUrl2) {
-    paymentParams.set("SuccessUrl2", successUrl2);
-    paymentParams.set("SuccessUrl2Method", "GET");
-  }
-  if (failUrl2) {
-    paymentParams.set("FailUrl2", failUrl2);
-    paymentParams.set("FailUrl2Method", "GET");
-  }
+  paymentParams.set("InvId", String(invId));
+  paymentParams.set("SignatureValue", signature);
 
   const paymentFormFields: Record<string, string> = Object.fromEntries(paymentParams.entries());
   paymentFormFields.Receipt = receiptEncoded;
@@ -1961,6 +2521,8 @@ async function handleCreateCheckout(request: Request, env: Env, executionContext
     trackingUrl: buildTrackingUrl(env, orderId, statusToken),
     amountRub,
     delivery: selectedDelivery ?? null,
+    pricing,
+    vacationNotice: getVacationOrderNotice(createdAt),
     paymentMode: roboConfig.mode,
     paymentForm: {
       action: paymentAction,
@@ -2036,6 +2598,21 @@ async function handleResult(request: Request, env: Env, executionContext: Execut
 
   executionContext.waitUntil((async () => {
     try {
+      let paidOrder: OrderRecord | null = null;
+      if (becamePaid) {
+        paidOrder = await loadOrderRecordById(env, order.id);
+        const pricing = parseOrderPricing(paidOrder?.pricing_json ?? null);
+        if (pricing?.promoCode) {
+          const markedUsed = await markPromoCodeUsed(env, pricing.promoCode, order.id);
+          if (!markedUsed) {
+            console.error("Failed to confirm promo code usage", {
+              promoCode: pricing.promoCode,
+              orderId: order.id,
+            });
+          }
+        }
+      }
+
       const orderEmailData = await loadOrderEmailData(env, invId);
       if (orderEmailData && !orderEmailData.email_sent_at) {
         const sent = await sendOrderPaidEmail(env, orderEmailData);
@@ -2044,23 +2621,22 @@ async function handleResult(request: Request, env: Env, executionContext: Execut
         }
       }
 
-      if (becamePaid && isTelegramConfigured(env)) {
-        const paidOrder = await loadOrderRecordById(env, order.id);
-        if (paidOrder) {
-          const message = buildTelegramOrderMessage({
-            title: "Оплата подтверждена",
-            env,
-            orderId: paidOrder.id,
-            invId: paidOrder.inv_id,
-            amountRub: paidOrder.amount_rub,
-            paymentStatus: "paid",
-            fulfillmentStatus: normalizeFulfillmentStatus(paidOrder.fulfillment_status),
-            items: parseOrderItems(paidOrder.items_json),
-            customer: parseCustomer(paidOrder.customer_json),
-            statusToken: paidOrder.status_token,
-          });
-          await notifyTelegramTargets(env, message);
-        }
+      if (becamePaid && isTelegramConfigured(env) && paidOrder) {
+        const message = buildTelegramOrderMessage({
+          title: "Оплата подтверждена",
+          env,
+          orderId: paidOrder.id,
+          invId: paidOrder.inv_id,
+          amountRub: paidOrder.amount_rub,
+          paymentStatus: "paid",
+          fulfillmentStatus: normalizeFulfillmentStatus(paidOrder.fulfillment_status),
+          items: parseOrderItems(paidOrder.items_json),
+          customer: parseCustomer(paidOrder.customer_json),
+          pricing: parseOrderPricing(paidOrder.pricing_json),
+          statusToken: paidOrder.status_token,
+          createdAt: paidOrder.created_at,
+        });
+        await notifyTelegramTargets(env, message);
       }
     } catch (error) {
       console.error("Failed to process paid-order side effects", error);
@@ -2079,11 +2655,8 @@ async function handleStatus(request: Request, env: Env): Promise<Response> {
     return badRequest(request, env, "id и token обязательны");
   }
 
-  const order = await env.DB.prepare(
-    "SELECT id, inv_id, status, fulfillment_status, fulfillment_status_updated_at, amount_rub, items_json, customer_json, created_at, paid_at FROM orders WHERE id = ? AND status_token = ? LIMIT 1",
-  )
-    .bind(orderId, token)
-    .first<{
+  let order:
+    | {
       id: string;
       inv_id: number;
       status: string;
@@ -2092,9 +2665,43 @@ async function handleStatus(request: Request, env: Env): Promise<Response> {
       amount_rub: string;
       items_json: string;
       customer_json: string | null;
+      pricing_json: string | null;
       created_at: string;
       paid_at: string | null;
-    }>();
+    }
+    | null = null;
+  type StatusOrderRow = NonNullable<typeof order>;
+
+  try {
+    order = await env.DB.prepare(
+      "SELECT id, inv_id, status, fulfillment_status, fulfillment_status_updated_at, amount_rub, items_json, customer_json, pricing_json, created_at, paid_at FROM orders WHERE id = ? AND status_token = ? LIMIT 1",
+    )
+      .bind(orderId, token)
+      .first<StatusOrderRow>();
+  } catch (error) {
+    if (!isMissingColumnError(error, "pricing_json")) {
+      throw error;
+    }
+
+    const legacyOrder = await env.DB.prepare(
+      "SELECT id, inv_id, status, fulfillment_status, fulfillment_status_updated_at, amount_rub, items_json, customer_json, created_at, paid_at FROM orders WHERE id = ? AND status_token = ? LIMIT 1",
+    )
+      .bind(orderId, token)
+      .first<{
+        id: string;
+        inv_id: number;
+        status: string;
+        fulfillment_status: string | null;
+        fulfillment_status_updated_at: string | null;
+        amount_rub: string;
+        items_json: string;
+        customer_json: string | null;
+        created_at: string;
+        paid_at: string | null;
+      }>();
+
+    order = legacyOrder ? { ...legacyOrder, pricing_json: null } : null;
+  }
 
   if (!order) {
     return jsonResponse(request, env, { error: "Заказ не найден" }, 404);
@@ -2107,6 +2714,7 @@ async function handleStatus(request: Request, env: Env): Promise<Response> {
     lineTotal: Number((item.price * item.quantity).toFixed(2)),
   }));
   const customer = parseCustomer(order.customer_json);
+  const pricing = parseOrderPricing(order.pricing_json);
   const fulfillmentStatus = normalizeFulfillmentStatus(order.fulfillment_status);
 
   const timeline = [
@@ -2123,6 +2731,7 @@ async function handleStatus(request: Request, env: Env): Promise<Response> {
     fulfillmentStatusUpdatedAt: order.fulfillment_status_updated_at,
     amountRub: order.amount_rub,
     items,
+    pricing,
     delivery: customer?.delivery
       ? {
         mode: customer.delivery.mode,
@@ -2138,6 +2747,7 @@ async function handleStatus(request: Request, env: Env): Promise<Response> {
     timeline,
     createdAt: order.created_at,
     paidAt: order.paid_at,
+    vacationNotice: getVacationOrderNotice(order.created_at),
   });
 
   response.headers.set("Cache-Control", "no-store");
@@ -2185,7 +2795,9 @@ async function handleAdminUpdateStatus(request: Request, env: Env): Promise<Resp
       fulfillmentStatus: nextStatus,
       items: parseOrderItems(updateResult.order.items_json),
       customer: parseCustomer(updateResult.order.customer_json),
+      pricing: parseOrderPricing(updateResult.order.pricing_json),
       statusToken: updateResult.order.status_token,
+      createdAt: updateResult.order.created_at,
     });
     await notifyTelegramTargets(env, message);
   }
@@ -2241,7 +2853,9 @@ async function handleTelegramOrderCommand(env: Env, chatId: string, identifier: 
     fulfillmentStatus: normalizeFulfillmentStatus(order.fulfillment_status),
     items: parseOrderItems(order.items_json),
     customer: parseCustomer(order.customer_json),
+    pricing: parseOrderPricing(order.pricing_json),
     statusToken: order.status_token,
+    createdAt: order.created_at,
   });
   await sendTelegramMessage(env, chatId, message);
 }
@@ -2286,7 +2900,9 @@ async function handleTelegramStatusCommand(env: Env, chatId: string, identifier:
     fulfillmentStatus: statusRaw,
     items: parseOrderItems(updateResult.order.items_json),
     customer: parseCustomer(updateResult.order.customer_json),
+    pricing: parseOrderPricing(updateResult.order.pricing_json),
     statusToken: updateResult.order.status_token,
+    createdAt: updateResult.order.created_at,
   });
   await notifyTelegramTargets(env, broadcast, chatId);
 }
@@ -2387,6 +3003,17 @@ export default {
       });
       if (limited) return limited;
       return handleDeliveryQuotes(request, env);
+    }
+
+    if (url.pathname === "/api/checkout/promo" && request.method === "POST") {
+      const limited = await applyRateLimit({
+        request,
+        env,
+        scope: "checkout_promo",
+        limit: RATE_LIMITS.promoValidate,
+      });
+      if (limited) return limited;
+      return handleValidatePromoCode(request, env);
     }
 
     if (url.pathname === "/api/checkout/create" && request.method === "POST") {

@@ -6,7 +6,8 @@ import { Textarea } from '../components/ui/textarea';
 import { useCart } from '../context/CartContext';
 import { getApiBaseUrl } from '../lib/api';
 import { toast } from 'sonner';
-import { Check, Minus, Plus, Trash2, Truck } from 'lucide-react';
+import { Check, Loader2, Minus, Plus, TicketPercent, Trash2, Truck } from 'lucide-react';
+import { VacationNotice } from '../components/VacationNotice';
 
 type CreateCheckoutResponse = {
   paymentUrl?: string;
@@ -17,6 +18,18 @@ type CreateCheckoutResponse = {
   };
   orderId: string;
   statusToken: string;
+  pricing?: {
+    subtotalRub: number;
+    baseDeliveryRub?: number;
+    deliveryRub: number;
+    deliveryDiscountRub?: number;
+    discountRub: number;
+    totalRub: number;
+    promoCode?: string;
+    promoPercent?: number;
+    freeShippingApplied?: boolean;
+  } | null;
+  vacationNotice?: string | null;
 };
 
 type DeliveryMode = 'russian_post' | 'ozon' | 'yandex';
@@ -38,11 +51,22 @@ type CheckoutDraft = {
   phone: string;
   telegram: string;
   comment: string;
+  promoCode: string;
   deliveryMode: DeliveryMode;
   destinationPostalCode: string;
   destinationAddress: string;
   postDeliveryMethod: PostDeliveryMethod;
 };
+
+type PromoValidationResponse = {
+  code: string;
+  discountPercent: number;
+  discountRub: number;
+  subtotalRub: number;
+  freeShipping: boolean;
+};
+
+type AppliedPromo = PromoValidationResponse;
 
 const DELIVERY_OPTIONS: Array<{
   value: DeliveryMode;
@@ -79,6 +103,10 @@ function isValidPostalCode(value: string): boolean {
 
 function isLikelyPhone(value: string): boolean {
   return value.replace(/\D/g, '').length >= 10;
+}
+
+function normalizePromoCode(value: string): string {
+  return value.trim().toUpperCase().replace(/\s+/g, '').slice(0, 40);
 }
 
 function formatDeliveryAmount(amountRub: number): string {
@@ -197,6 +225,7 @@ function getCheckoutDraft(): CheckoutDraft | null {
       phone: String(parsed.phone ?? (parsed as { contact?: string }).contact ?? ''),
       telegram: String(parsed.telegram ?? ''),
       comment: String(parsed.comment ?? ''),
+      promoCode: String(parsed.promoCode ?? ''),
       deliveryMode,
       destinationPostalCode: String(parsed.destinationPostalCode ?? ''),
       destinationAddress: String(parsed.destinationAddress ?? ''),
@@ -219,6 +248,9 @@ export function Checkout() {
   const [phone, setPhone] = useState(() => draft?.phone ?? '');
   const [telegram, setTelegram] = useState(() => draft?.telegram ?? '');
   const [comment, setComment] = useState(() => draft?.comment ?? '');
+  const [promoCodeInput, setPromoCodeInput] = useState(() => draft?.promoCode ?? '');
+  const [appliedPromo, setAppliedPromo] = useState<AppliedPromo | null>(null);
+  const [isApplyingPromo, setIsApplyingPromo] = useState(false);
   const [deliveryMode, setDeliveryMode] = useState<DeliveryMode>(
     () => draft?.deliveryMode ?? 'russian_post',
   );
@@ -243,8 +275,11 @@ export function Checkout() {
     () => buildSelectedDeliveryOption(deliveryMode, postDeliveryMethod, total),
     [deliveryMode, postDeliveryMethod, total],
   );
-  const deliveryAmount = selectedDeliveryOption.amountRub;
-  const totalWithDelivery = total + deliveryAmount;
+  const promoDiscountAmount = appliedPromo?.discountRub ?? 0;
+  const appliedPromoCode = appliedPromo?.code ?? '';
+  const isPromoFreeShipping = appliedPromo?.freeShipping === true;
+  const deliveryAmount = isPromoFreeShipping ? 0 : selectedDeliveryOption.amountRub;
+  const totalWithDelivery = Math.max(0, total - promoDiscountAmount) + deliveryAmount;
   const isPhoneRequired = deliveryMode === 'ozon'
     || deliveryMode === 'yandex'
     || (deliveryMode === 'russian_post' && postDeliveryMethod === 'phone');
@@ -261,6 +296,7 @@ export function Checkout() {
           phone,
           telegram,
           comment,
+          promoCode: promoCodeInput,
           deliveryMode,
           destinationPostalCode,
           destinationAddress,
@@ -270,7 +306,91 @@ export function Checkout() {
     } catch {
       // Ignore storage errors (private mode / quota), checkout should still work.
     }
-  }, [comment, deliveryMode, destinationAddress, destinationPostalCode, email, name, phone, postDeliveryMethod, telegram]);
+  }, [comment, deliveryMode, destinationAddress, destinationPostalCode, email, name, phone, postDeliveryMethod, promoCodeInput, telegram]);
+
+  const applyPromoCode = async (rawCode: string, options?: { silent?: boolean }) => {
+    const normalizedCode = normalizePromoCode(rawCode);
+    if (!normalizedCode) {
+      if (!options?.silent) {
+        toast.error('Введи промокод');
+      }
+      setAppliedPromo(null);
+      return false;
+    }
+
+    if (cartItems.length === 0) {
+      if (!options?.silent) {
+        toast.error('Корзина пуста');
+      }
+      setAppliedPromo(null);
+      return false;
+    }
+
+    setIsApplyingPromo(true);
+    const apiBase = getApiBaseUrl();
+
+    try {
+      const response = await fetch(`${apiBase}/api/checkout/promo`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          items: cartItems.map((item) => ({
+            id: item.id,
+            quantity: item.quantity,
+          })),
+          promoCode: normalizedCode,
+        }),
+      });
+
+      const data = await parseJsonResponse<Partial<PromoValidationResponse> & { error?: string }>(response);
+      if (!response.ok || !data.code || typeof data.discountPercent !== 'number' || typeof data.discountRub !== 'number') {
+        throw new Error(data.error || 'Не удалось применить промокод');
+      }
+
+      const nextPromo: AppliedPromo = {
+        code: String(data.code),
+        discountPercent: Number(data.discountPercent),
+        discountRub: Number(data.discountRub),
+        subtotalRub: Number(data.subtotalRub ?? total),
+        freeShipping: Boolean(data.freeShipping),
+      };
+      setAppliedPromo(nextPromo);
+      setPromoCodeInput(nextPromo.code);
+
+      if (!options?.silent) {
+        toast.success('Промокод применен', {
+          description: `Скидка ${nextPromo.discountPercent}% активна для этого заказа.`,
+        });
+      }
+      return true;
+    } catch (error) {
+      setAppliedPromo(null);
+      if (!options?.silent) {
+        toast.error('Промокод не сработал', {
+          description: error instanceof Error ? error.message : 'Попробуй другой код.',
+        });
+      }
+      return false;
+    } finally {
+      setIsApplyingPromo(false);
+    }
+  };
+
+  useEffect(() => {
+    if (cartItems.length === 0) {
+      setAppliedPromo(null);
+      return;
+    }
+
+    const normalizedInput = normalizePromoCode(promoCodeInput);
+    if (!appliedPromoCode || !normalizedInput || normalizedInput !== appliedPromoCode) {
+      return;
+    }
+
+    void applyPromoCode(normalizedInput, { silent: true });
+  }, [appliedPromoCode, cartItems, promoCodeInput, total]);
 
   const handleOnlinePayment = async () => {
     if (cartItems.length === 0 || isSubmitting) return;
@@ -287,6 +407,14 @@ export function Checkout() {
     const normalizedTelegram = telegram.trim();
     const normalizedAddress = destinationAddress.trim();
     const normalizedPostalCode = destinationPostalCode.trim();
+    const normalizedPromoCode = normalizePromoCode(promoCodeInput);
+
+    if (normalizedPromoCode && (!appliedPromo || appliedPromo.code !== normalizedPromoCode)) {
+      toast.error('Сначала проверь промокод', {
+        description: 'Нажми «Применить», чтобы сервер подтвердил скидку перед оплатой.',
+      });
+      return;
+    }
 
     if (isPhoneRequired && !isLikelyPhone(normalizedPhone)) {
       toast.error('Нужен номер телефона', {
@@ -325,6 +453,7 @@ export function Checkout() {
             id: item.id,
             quantity: item.quantity,
           })),
+          promoCode: normalizedPromoCode || undefined,
           customer: {
             email: normalizedEmail,
             name: name.trim() || undefined,
@@ -417,6 +546,8 @@ export function Checkout() {
           <h1 className="text-4xl sm:text-5xl">Оформление заказа</h1>
           <p className="text-muted-foreground mt-2">Заполни контакты, выбери способ доставки и перейди к оплате.</p>
         </div>
+
+        <VacationNotice className="mb-6" />
 
         <div className="grid grid-cols-1 lg:grid-cols-[1.2fr_0.8fr] gap-6 lg:gap-8">
           <div className="space-y-6">
@@ -517,8 +648,13 @@ export function Checkout() {
                 <div className={`rounded-xl border px-3 py-2 text-sm ${getDeliveryToneClass(deliveryMode)}`}>
                   <p className="font-medium">{selectedDeliveryOption.optionLabel}</p>
                   <p className="text-xs opacity-90">
-                    {formatDeliveryAmount(selectedDeliveryOption.amountRub)} • срок {selectedDeliveryOption.etaMinDays}-{selectedDeliveryOption.etaMaxDays} дн.
+                    {formatDeliveryAmount(deliveryAmount)} • срок {selectedDeliveryOption.etaMinDays}-{selectedDeliveryOption.etaMaxDays} дн.
                   </p>
+                  {isPromoFreeShipping && selectedDeliveryOption.amountRub > 0 && (
+                    <p className="mt-1 text-[11px] opacity-90">
+                      Бесплатная доставка применена по промокоду.
+                    </p>
+                  )}
                 </div>
 
                 {isPostalAddressRequired && (
@@ -591,6 +727,52 @@ export function Checkout() {
           <aside className="lg:sticky lg:top-24 h-fit bg-card border border-border/60 rounded-3xl p-5 sm:p-6 space-y-5">
             <h2 className="text-2xl">Твой заказ</h2>
 
+            <div className="rounded-2xl border border-border/70 p-4 space-y-3">
+              <div className="flex items-center gap-2">
+                <TicketPercent className="w-4 h-4 text-muted-foreground" />
+                <p className="text-sm font-medium">Промокод</p>
+              </div>
+              <div className="flex flex-col sm:flex-row gap-2">
+                <Input
+                  value={promoCodeInput}
+                  onChange={(event) => {
+                    const nextValue = event.target.value.toUpperCase();
+                    setPromoCodeInput(nextValue);
+                    if (appliedPromoCode && normalizePromoCode(nextValue) !== appliedPromoCode) {
+                      setAppliedPromo(null);
+                    }
+                  }}
+                  placeholder="Например, MAKI15"
+                  autoComplete="off"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => void applyPromoCode(promoCodeInput)}
+                  disabled={isApplyingPromo}
+                  className="sm:w-auto"
+                >
+                  {isApplyingPromo ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Проверяем
+                    </>
+                  ) : 'Применить'}
+                </Button>
+              </div>
+              {appliedPromo && (
+                <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-700 dark:text-emerald-300">
+                  <p className="font-medium">
+                    {appliedPromo.code} активен
+                  </p>
+                  <p className="text-xs opacity-90">
+                    Скидка {appliedPromo.discountPercent}%: -{appliedPromo.discountRub} ₽
+                    {appliedPromo.freeShipping ? ' и бесплатная доставка' : ''}
+                  </p>
+                </div>
+              )}
+            </div>
+
             <div className="space-y-3 max-h-[420px] overflow-y-auto pr-1">
               {cartItems.map((item) => (
                 <div key={item.id} className="border border-border/60 rounded-2xl p-3">
@@ -645,10 +827,25 @@ export function Checkout() {
                 <span>Товары</span>
                 <span>{total} ₽</span>
               </div>
+              {appliedPromo && (
+                <div className="flex items-center justify-between text-sm text-emerald-700 dark:text-emerald-300">
+                  <span>
+                    Промокод {appliedPromo.code}
+                    {appliedPromo.discountPercent ? ` (-${appliedPromo.discountPercent}%)` : ''}
+                  </span>
+                  <span>-{promoDiscountAmount} ₽</span>
+                </div>
+              )}
               <div className="flex items-center justify-between text-sm text-muted-foreground">
                 <span>Доставка</span>
-                <span>{formatDeliveryAmount(selectedDeliveryOption.amountRub)}</span>
+                <span>{formatDeliveryAmount(deliveryAmount)}</span>
               </div>
+              {isPromoFreeShipping && selectedDeliveryOption.amountRub > 0 && (
+                <div className="flex items-center justify-between text-sm text-emerald-700 dark:text-emerald-300">
+                  <span>Бесплатная доставка по промокоду</span>
+                  <span>-{selectedDeliveryOption.amountRub} ₽</span>
+                </div>
+              )}
               <div className="flex items-center justify-between text-lg font-semibold">
                 <span>Итого</span>
                 <span>{totalWithDelivery} ₽</span>

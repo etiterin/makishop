@@ -2,6 +2,7 @@
 
 ## Что реализовано
 - `POST /api/delivery/quotes` — расчет вариантов доставки (Почта России/Ozon/Яндекс) по индексу и корзине. Фиксированные тарифы: 400/300/300 ₽, бесплатно от 1700 ₽.
+- `POST /api/checkout/promo` — проверка доступности промокода и расчет скидки по текущей корзине.
 - `POST /api/checkout/create` — создает заказ в D1, пересчитывает сумму по каталогу и отдает ссылку на оплату Robokassa.
 - `POST|GET /api/checkout/result` — webhook от Robokassa, проверка подписи и обновление статуса заказа.
 - `GET /api/checkout/status?id=...&token=...` — статус заказа для фронта.
@@ -36,6 +37,45 @@ npx wrangler d1 create makishop_orders
 ```bash
 npx wrangler d1 migrations apply makishop_orders --local
 npx wrangler d1 migrations apply makishop_orders --remote
+```
+
+## 2.1. Добавить промокоды вручную
+Реальные коды лучше не коммитить в публичный репозиторий. Добавляйте их прямо в D1:
+
+```bash
+npx wrangler d1 execute makishop_orders --remote --command "
+INSERT INTO promo_codes (code, discount_percent, single_use, is_active, free_shipping, created_at, updated_at, note)
+VALUES
+  ('PUT_REAL_CODE_30', 30, 1, 1, 1, datetime('now'), datetime('now'), 'Одноразовый код 30% + бесплатная доставка'),
+  ('PUT_REAL_CODE_15', 15, 1, 1, 1, datetime('now'), datetime('now'), 'Одноразовый код 15% + бесплатная доставка'),
+  ('PUT_REAL_CODE_10', 10, 1, 1, 1, datetime('now'), datetime('now'), 'Одноразовый код 10% + бесплатная доставка');
+"
+```
+
+Промокод:
+- не расходуется на проверке;
+- резервируется после успешного `checkout/create`;
+- окончательно помечается использованным после подтверждения оплаты Robokassa.
+- может дополнительно давать бесплатную доставку через `free_shipping = 1`.
+
+Если нужно вручную освободить незавершенный резерв:
+
+```bash
+npx wrangler d1 execute makishop_orders --remote --command "
+UPDATE promo_codes
+SET reserved_at = NULL, reserved_order_id = NULL, updated_at = datetime('now')
+WHERE code = 'PUT_REAL_CODE_15' AND used_at IS NULL;
+"
+```
+
+Если коды уже созданы и нужно просто включить им бесплатную доставку:
+
+```bash
+npx wrangler d1 execute makishop_orders --remote --command "
+UPDATE promo_codes
+SET free_shipping = 1, updated_at = datetime('now')
+WHERE code IN ('PUT_REAL_CODE_30', 'PUT_REAL_CODE_15', 'PUT_REAL_CODE_10');
+"
 ```
 
 ## 3. Настроить секреты

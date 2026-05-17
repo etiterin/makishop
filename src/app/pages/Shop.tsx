@@ -17,6 +17,7 @@ import { useCart } from '../context/CartContext';
 import { toast } from 'sonner';
 import type { Product, ProductCategory, ProductFandom } from '../types/product';
 import { compareProductsBySiteOrder, PRODUCT_CATEGORY_SORT_ORDER } from '../lib/productSort';
+import { VacationNotice } from '../components/VacationNotice';
 
 const products = productsData.products;
 
@@ -74,6 +75,8 @@ export function Shop() {
   return (
     <div className="min-h-screen pt-24 pb-20 px-6">
       <div className="max-w-7xl mx-auto">
+        <VacationNotice className="mb-6" />
+
         <div className="mb-16 bg-card rounded-3xl border border-border/60 shadow-sm p-4 sm:p-6">
           <button
             type="button"
