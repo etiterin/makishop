@@ -573,6 +573,26 @@
         "Каждый стикер с индивидуальной резкой",
         "Сияющее сахарное покрытие"
       ]
+    },
+    {
+      "fandoms": [
+        "Pokemon"
+      ],
+      "price": 550,
+      "name": "Значок Эспеон",
+      "inStock": true,
+      "detailsTitle": "",
+      "images": [
+        "/images/uploads/dthtdghrzfyh.jpg",
+        "/images/uploads/ghzdg.jpg"
+      ],
+      "id": 35,
+      "description": "Значок на сияющей подложке",
+      "category": "badge",
+      "detailsItems": [
+        "Сияющая подложка",
+        "Любимая ивилюция"
+      ]
     }
   ]
 }
