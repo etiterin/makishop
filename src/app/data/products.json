@@ -612,6 +612,20 @@
         "Сияющая голографическая подложка",
         "Любимая ивилюция"
       ]
+    },
+    {
+      "inStock": true,
+      "id": 37,
+      "name": "Значок Гласеон",
+      "price": 550,
+      "category": "badge",
+      "fandoms": [
+        "Pokemon"
+      ],
+      "images": [
+        "/images/uploads/rrikutlyi-i.jpg",
+        "/images/uploads/ifyiolfolfol.jpg"
+      ]
     }
   ]
 }
