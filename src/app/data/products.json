@@ -626,6 +626,20 @@
         "/images/uploads/rrikutlyi-i.jpg",
         "/images/uploads/ifyiolfolfol.jpg"
       ]
+    },
+    {
+      "inStock": true,
+      "id": 38,
+      "name": "Значок Флареон",
+      "price": 550,
+      "category": "badge",
+      "fandoms": [
+        "Pokemon"
+      ],
+      "images": [
+        "/images/uploads/tedjzyrktul.jpg",
+        "/images/uploads/y-ip-ip-gip-.jpg"
+      ]
     }
   ]
 }
