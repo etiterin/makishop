@@ -573,6 +573,81 @@
         "Каждый стикер с индивидуальной резкой",
         "Сияющее сахарное покрытие"
       ]
+    },
+    {
+      "fandoms": [
+        "Pokemon"
+      ],
+      "price": 550,
+      "name": "Значок Эспеон",
+      "inStock": true,
+      "detailsTitle": "",
+      "images": [
+        "/images/uploads/dthtdghrzfyh.jpg",
+        "/images/uploads/ghzdg.jpg"
+      ],
+      "id": 35,
+      "description": "Значок на сияющей подложке",
+      "category": "badge",
+      "detailsItems": [
+        "Сияющая подложка",
+        "Любимая ивилюция"
+      ]
+    },
+    {
+      "fandoms": [
+        "Pokemon"
+      ],
+      "price": 550,
+      "name": "Значок Умбреон",
+      "inStock": true,
+      "images": [
+        "/images/uploads/cyiliulycil.jpg",
+        "/images/uploads/rzhetjhyt.jpg"
+      ],
+      "id": 36,
+      "description": "Значок на сияющей подложке",
+      "category": "badge",
+      "detailsItems": [
+        "Сияющая голографическая подложка",
+        "Любимая ивилюция"
+      ]
+    },
+    {
+      "inStock": true,
+      "id": 37,
+      "name": "Значок Гласеон",
+      "price": 550,
+      "category": "badge",
+      "fandoms": [
+        "Pokemon"
+      ],
+      "images": [
+        "/images/uploads/rrikutlyi-i.jpg",
+        "/images/uploads/ifyiolfolfol.jpg"
+      ],
+      "detailsItems": [
+        "Сияющая подложка",
+        "Любимая ивилюция"
+      ]
+    },
+    {
+      "inStock": true,
+      "id": 38,
+      "name": "Значок Флареон",
+      "price": 550,
+      "category": "badge",
+      "fandoms": [
+        "Pokemon"
+      ],
+      "images": [
+        "/images/uploads/tedjzyrktul.jpg",
+        "/images/uploads/y-ip-ip-gip-.jpg"
+      ],
+      "detailsItems": [
+        "Сияющая подложка",
+        "Любимая ивилюция"
+      ]
     }
   ]
 }
