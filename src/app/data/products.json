@@ -593,6 +593,25 @@
         "Сияющая подложка",
         "Любимая ивилюция"
       ]
+    },
+    {
+      "fandoms": [
+        "Pokemon"
+      ],
+      "price": 550,
+      "name": "Значок Умбреон",
+      "inStock": true,
+      "images": [
+        "/images/uploads/cyiliulycil.jpg",
+        "/images/uploads/rzhetjhyt.jpg"
+      ],
+      "id": 36,
+      "description": "Значок на сияющей подложке",
+      "category": "badge",
+      "detailsItems": [
+        "Сияющая голографическая подложка",
+        "Любимая ивилюция"
+      ]
     }
   ]
 }
