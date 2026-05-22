@@ -8,7 +8,7 @@
 - `GET /api/checkout/status?id=...&token=...` — статус заказа для фронта.
 - `GET /api/orders/track?id=...&token=...` — публичный трекинг заказа по персональной ссылке.
 - `POST /api/admin/orders/status` — смена трекинг-статуса заказа (с `Authorization: Bearer <ADMIN_STATUS_API_KEY>`).
-- `POST /api/telegram/webhook/<secret>` — webhook Telegram-бота для уведомлений и команд `/order`, `/status`.
+- `POST /api/telegram/webhook/<secret>` — webhook Telegram-бота для уведомлений и команд `/order`, `/status`, `/track`.
 - `GET /api/health` — health check.
 
 ## Режимы оплаты (test/live)
@@ -122,6 +122,9 @@ curl "https://api.telegram.org/bot<TELEGRAM_BOT_TOKEN>/getWebhookInfo"
 - `/help`
 - `/order <id|invId>`
 - `/status <id|invId> <pending_payment|paid|processing|shipped|delivered|completed|canceled>`
+- `/track <id|invId> <https://...>` — сохранить трек-ссылку у заказа и отправить клиенту email с кликабельной ссылкой
+
+Если задан `TELEGRAM_GROUP_ID`, уведомления уходят в группу, и команды тоже можно отправлять прямо из этой группы.
 
 ## 5. Переключить режим на уже задеплоенном воркере
 ```bash

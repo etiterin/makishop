@@ -55,6 +55,8 @@ type TrackOrderResponse = {
   }>;
   createdAt: string;
   paidAt: string | null;
+  shipmentTrackingUrl: string | null;
+  shipmentTrackingSentAt: string | null;
   vacationNotice: string | null;
 };
 
@@ -201,6 +203,8 @@ export function TrackOrder() {
           : [],
         createdAt: String(data.createdAt ?? ''),
         paidAt: data.paidAt ? String(data.paidAt) : null,
+        shipmentTrackingUrl: data.shipmentTrackingUrl ? String(data.shipmentTrackingUrl) : null,
+        shipmentTrackingSentAt: data.shipmentTrackingSentAt ? String(data.shipmentTrackingSentAt) : null,
         vacationNotice: data.vacationNotice ? String(data.vacationNotice) : null,
       });
     } catch (error) {
@@ -391,6 +395,32 @@ export function TrackOrder() {
                 </p>
                 <p className="text-sm text-muted-foreground">
                   Ориентировочный срок: {statusData.delivery.etaMinDays}-{statusData.delivery.etaMaxDays} дн.
+                </p>
+              </div>
+            )}
+
+            {statusData.shipmentTrackingUrl && (
+              <div className="space-y-3 rounded-2xl border border-border/60 p-4">
+                <div className="space-y-1">
+                  <p className="font-medium">Отслеживание отправления</p>
+                  <p className="text-sm text-muted-foreground break-all">
+                    Когда посылка движется у перевозчика, актуальная ссылка появится здесь.
+                  </p>
+                  {statusData.shipmentTrackingSentAt && (
+                    <p className="text-xs text-muted-foreground">
+                      Ссылка отправлена на email: {formatDateTime(statusData.shipmentTrackingSentAt)}
+                    </p>
+                  )}
+                </div>
+                <div className="flex flex-wrap gap-3">
+                  <Button asChild>
+                    <a href={statusData.shipmentTrackingUrl} target="_blank" rel="noreferrer">
+                      Отследить отправление
+                    </a>
+                  </Button>
+                </div>
+                <p className="text-xs text-muted-foreground break-all">
+                  {statusData.shipmentTrackingUrl}
                 </p>
               </div>
             )}

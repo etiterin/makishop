@@ -126,6 +126,8 @@ type OrderRecord = {
   items_json: string;
   customer_json: string | null;
   pricing_json: string | null;
+  shipment_tracking_url: string | null;
+  shipment_tracking_sent_at: string | null;
   status_token: string;
   created_at: string;
   paid_at: string | null;
@@ -172,6 +174,8 @@ type OrderEmailData = {
   items_json: string;
   customer_json: string | null;
   pricing_json: string | null;
+  shipment_tracking_url: string | null;
+  shipment_tracking_sent_at: string | null;
   status_token: string;
   created_at: string;
   email_sent_at: string | null;
@@ -861,6 +865,21 @@ function buildTrackingUrl(env: Env, orderId: string, statusToken: string): strin
   return `${getTrackBaseUrl(env)}/track?id=${encodeURIComponent(orderId)}&token=${encodeURIComponent(statusToken)}`;
 }
 
+function sanitizeTrackingUrl(value: string | undefined): string | null {
+  const normalized = value?.trim();
+  if (!normalized) return null;
+
+  try {
+    const parsed = new URL(normalized);
+    if (parsed.protocol !== "https:" && parsed.protocol !== "http:") {
+      return null;
+    }
+    return parsed.toString();
+  } catch {
+    return null;
+  }
+}
+
 function formatTelegramItems(items: OrderLineItem[]): string {
   if (items.length === 0) return "- Состав уточняется";
 
@@ -907,6 +926,7 @@ function buildTelegramOrderMessage(args: {
   pricing: OrderPricing | null;
   statusToken: string;
   createdAt: string;
+  shipmentTrackingUrl?: string | null;
 }): string {
   const {
     title,
@@ -921,6 +941,7 @@ function buildTelegramOrderMessage(args: {
     pricing,
     statusToken,
     createdAt,
+    shipmentTrackingUrl,
   } = args;
 
   const paymentLabel = paymentStatus === "paid" ? "Оплачено" : "Ожидает оплату";
@@ -965,7 +986,10 @@ function buildTelegramOrderMessage(args: {
     lines.push("", `Важно: ${vacationNotice}`);
   }
 
-  lines.push("", `Трекинг: ${trackingUrl}`);
+  lines.push("", `Трекинг заказа: ${trackingUrl}`);
+  if (shipmentTrackingUrl) {
+    lines.push(`Трек отправления: ${shipmentTrackingUrl}`);
+  }
 
   return lines.join("\n");
 }
@@ -1056,6 +1080,157 @@ function formatRub(value: number | string): string {
   if (!Number.isFinite(amount)) return "0 ₽";
   const rounded = Number(amount.toFixed(2));
   return Number.isInteger(rounded) ? `${rounded.toFixed(0)} ₽` : `${rounded.toFixed(2)} ₽`;
+}
+
+function buildShipmentEmailHtml(args: {
+  invId: number;
+  customer: OrderCustomer | null;
+  shipmentTrackingUrl: string;
+  orderTrackingUrl: string;
+}): string {
+  const { invId, customer, shipmentTrackingUrl, orderTrackingUrl } = args;
+  const deliveryText = formatDeliverySummary(customer);
+
+  return `
+    <!doctype html>
+    <html lang="ru">
+      <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width,initial-scale=1" />
+        <meta name="color-scheme" content="light dark" />
+        <meta name="supported-color-schemes" content="light dark" />
+        <style>
+          body, .email-bg {
+            background: #f4f6f9 !important;
+          }
+          .card {
+            background: #ffffff !important;
+            border: 1px solid #e5e7eb !important;
+          }
+          .header {
+            background: #f9fafb !important;
+            border-bottom: 1px solid #eef1f5 !important;
+          }
+          .brand {
+            color: #6b7280 !important;
+          }
+          .title {
+            color: #111827 !important;
+          }
+          .item-name {
+            color: #1f2937 !important;
+          }
+          .item-muted {
+            color: #4b5563 !important;
+          }
+          .chip {
+            background: #f3f4f6 !important;
+            border-color: #e5e7eb !important;
+          }
+          @media (prefers-color-scheme: dark) {
+            body, .email-bg {
+              background: #0f1115 !important;
+            }
+            .card {
+              background: #171b24 !important;
+              border-color: #2b3342 !important;
+            }
+            .header {
+              background: #1c2230 !important;
+              border-bottom-color: #2b3342 !important;
+            }
+            .brand {
+              color: #9aa6ba !important;
+            }
+            .title {
+              color: #f9fafb !important;
+            }
+            .item-name {
+              color: #f3f4f6 !important;
+            }
+            .item-muted {
+              color: #c2cad8 !important;
+            }
+            .chip {
+              background: #1f2634 !important;
+              border-color: #31394a !important;
+            }
+          }
+        </style>
+      </head>
+      <body style="margin:0; padding:0;">
+        <table role="presentation" cellpadding="0" cellspacing="0" width="100%" class="email-bg" style="background: #f4f6f9; padding: 24px 8px;">
+          <tr>
+            <td align="center">
+              <table role="presentation" cellpadding="0" cellspacing="0" width="100%" class="card" style="max-width: 620px; background: #ffffff; border-radius: 14px; overflow: hidden; border: 1px solid #e5e7eb;">
+                <tr>
+                  <td class="header" style="padding: 24px 26px 16px; background: #f9fafb; border-bottom: 1px solid #eef1f5;">
+                    <p class="brand" style="margin: 0 0 8px; color: #6b7280; font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase;">
+                      Лавка Макинари
+                    </p>
+                    <h1 class="title" style="margin: 0; color: #111827; font-size: 24px; line-height: 1.3; font-weight: 700;">
+                      Заказ передан в доставку
+                    </h1>
+                    <p class="item-muted" style="margin: 8px 0 0; color: #4b5563; font-size: 14px;">
+                      Можно открыть ссылку ниже и посмотреть движение отправления.
+                    </p>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding: 0 26px 8px;">
+                    <div class="chip" style="padding: 14px; border: 1px solid #e5e7eb; border-radius: 10px; margin-top: 14px;">
+                      <p class="item-name" style="margin: 0 0 6px; color: #1f2937; font-size: 14px;">
+                        Номер заказа: <strong>#${invId}</strong>
+                      </p>
+                      <p class="item-name" style="margin: 0; color: #1f2937; font-size: 14px;">
+                        Доставка: <strong>${escapeHtml(deliveryText)}</strong>
+                      </p>
+                    </div>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding: 14px 26px 0;">
+                    <p class="item-name" style="margin: 0 0 10px; color: #1f2937; font-size: 14px; line-height: 1.6;">
+                      Ссылка для отслеживания отправления:
+                    </p>
+                    <p style="margin: 0 0 14px;">
+                      <a
+                        href="${escapeHtml(shipmentTrackingUrl)}"
+                        style="display:inline-block; text-decoration:none; background:#111827; color:#ffffff; padding:10px 16px; border-radius:10px; font-size:14px; font-weight:600;"
+                      >
+                        Отследить отправление
+                      </a>
+                    </p>
+                    <p class="item-muted" style="margin: 0; color: #4b5563; font-size: 13px; line-height: 1.6; word-break: break-all;">
+                      <a href="${escapeHtml(shipmentTrackingUrl)}" style="color: inherit; text-decoration: underline;">${escapeHtml(shipmentTrackingUrl)}</a>
+                    </p>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding: 22px 26px 26px;">
+                    <p class="item-muted" style="margin: 0 0 10px; color: #4b5563; font-size: 13px; line-height: 1.55;">
+                      На странице заказа также будет отражаться актуальный статус:
+                    </p>
+                    <p style="margin: 0 0 12px;">
+                      <a
+                        href="${escapeHtml(orderTrackingUrl)}"
+                        style="display:inline-block; text-decoration:none; background:#f3f4f6; color:#111827; padding:10px 16px; border-radius:10px; font-size:14px; font-weight:600; border:1px solid #d1d5db;"
+                      >
+                        Открыть страницу заказа
+                      </a>
+                    </p>
+                    <p class="item-muted" style="margin: 0; color: #4b5563; font-size: 13px; line-height: 1.55;">
+                      Если потребуется изменить данные доставки, просто ответьте на это письмо.
+                    </p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+        </table>
+      </body>
+    </html>
+  `;
 }
 
 function buildOrderEmailHtml(args: {
@@ -1497,7 +1672,9 @@ async function loadOrderRecordById(env: Env, orderId: string): Promise<OrderReco
   try {
     return await env.DB.prepare(
       `SELECT id, inv_id, status, fulfillment_status, fulfillment_status_updated_at,
-              amount_rub, items_json, customer_json, pricing_json, status_token, created_at, paid_at
+              amount_rub, items_json, customer_json, pricing_json,
+              shipment_tracking_url, shipment_tracking_sent_at,
+              status_token, created_at, paid_at
        FROM orders
        WHERE id = ?
        LIMIT 1`,
@@ -1505,7 +1682,11 @@ async function loadOrderRecordById(env: Env, orderId: string): Promise<OrderReco
       .bind(orderId)
       .first<OrderRecord>();
   } catch (error) {
-    if (!isMissingColumnError(error, "pricing_json")) {
+    if (
+      !isMissingColumnError(error, "pricing_json")
+      && !isMissingColumnError(error, "shipment_tracking_url")
+      && !isMissingColumnError(error, "shipment_tracking_sent_at")
+    ) {
       throw error;
     }
 
@@ -1517,9 +1698,16 @@ async function loadOrderRecordById(env: Env, orderId: string): Promise<OrderReco
        LIMIT 1`,
     )
       .bind(orderId)
-      .first<Omit<OrderRecord, "pricing_json">>();
+      .first<Omit<OrderRecord, "pricing_json" | "shipment_tracking_url" | "shipment_tracking_sent_at">>();
 
-    return legacyOrder ? { ...legacyOrder, pricing_json: null } : null;
+    return legacyOrder
+      ? {
+        ...legacyOrder,
+        pricing_json: null,
+        shipment_tracking_url: null,
+        shipment_tracking_sent_at: null,
+      }
+      : null;
   }
 }
 
@@ -1539,7 +1727,9 @@ async function loadOrderRecordByIdentifier(env: Env, identifier: string): Promis
   try {
     return await env.DB.prepare(
       `SELECT id, inv_id, status, fulfillment_status, fulfillment_status_updated_at,
-              amount_rub, items_json, customer_json, pricing_json, status_token, created_at, paid_at
+              amount_rub, items_json, customer_json, pricing_json,
+              shipment_tracking_url, shipment_tracking_sent_at,
+              status_token, created_at, paid_at
        FROM orders
        WHERE inv_id = ?
        LIMIT 1`,
@@ -1547,7 +1737,11 @@ async function loadOrderRecordByIdentifier(env: Env, identifier: string): Promis
       .bind(Number(normalized))
       .first<OrderRecord>();
   } catch (error) {
-    if (!isMissingColumnError(error, "pricing_json")) {
+    if (
+      !isMissingColumnError(error, "pricing_json")
+      && !isMissingColumnError(error, "shipment_tracking_url")
+      && !isMissingColumnError(error, "shipment_tracking_sent_at")
+    ) {
       throw error;
     }
 
@@ -1559,9 +1753,16 @@ async function loadOrderRecordByIdentifier(env: Env, identifier: string): Promis
        LIMIT 1`,
     )
       .bind(Number(normalized))
-      .first<Omit<OrderRecord, "pricing_json">>();
+      .first<Omit<OrderRecord, "pricing_json" | "shipment_tracking_url" | "shipment_tracking_sent_at">>();
 
-    return legacyOrder ? { ...legacyOrder, pricing_json: null } : null;
+    return legacyOrder
+      ? {
+        ...legacyOrder,
+        pricing_json: null,
+        shipment_tracking_url: null,
+        shipment_tracking_sent_at: null,
+      }
+      : null;
   }
 }
 
@@ -1591,6 +1792,52 @@ async function updateOrderFulfillmentStatus(env: Env, orderId: string, nextStatu
       fulfillment_status_updated_at: updatedAt,
     },
     previousStatus,
+    updatedAt,
+  };
+}
+
+async function updateOrderShipmentTracking(env: Env, orderId: string, shipmentTrackingUrl: string): Promise<{
+  order: OrderRecord;
+  previousStatus: FulfillmentStatus;
+  nextStatus: FulfillmentStatus;
+  updatedAt: string;
+} | null> {
+  const existingOrder = await loadOrderRecordById(env, orderId);
+  if (!existingOrder) {
+    return null;
+  }
+
+  const previousStatus = normalizeFulfillmentStatus(existingOrder.fulfillment_status);
+  const nextStatus = previousStatus === "paid" || previousStatus === "processing"
+    ? "shipped"
+    : previousStatus;
+  const updatedAt = nowIso();
+  const nextStatusUpdatedAt = nextStatus !== previousStatus
+    ? updatedAt
+    : existingOrder.fulfillment_status_updated_at;
+
+  await env.DB.prepare(
+    `UPDATE orders
+     SET shipment_tracking_url = ?,
+         shipment_tracking_sent_at = NULL,
+         fulfillment_status = ?,
+         fulfillment_status_updated_at = ?,
+         updated_at = ?
+     WHERE id = ?`,
+  )
+    .bind(shipmentTrackingUrl, nextStatus, nextStatusUpdatedAt, updatedAt, orderId)
+    .run();
+
+  return {
+    order: {
+      ...existingOrder,
+      shipment_tracking_url: shipmentTrackingUrl,
+      shipment_tracking_sent_at: null,
+      fulfillment_status: nextStatus,
+      fulfillment_status_updated_at: nextStatusUpdatedAt,
+    },
+    previousStatus,
+    nextStatus,
     updatedAt,
   };
 }
@@ -1649,12 +1896,17 @@ async function markOrderPaid(env: Env, orderId: string, paymentMode: RoboMode): 
 async function loadOrderEmailData(env: Env, invId: number): Promise<OrderEmailData | null> {
   try {
     return await env.DB.prepare(
-      "SELECT id, inv_id, amount_rub, items_json, customer_json, pricing_json, status_token, created_at, email_sent_at FROM orders WHERE inv_id = ? LIMIT 1",
+      "SELECT id, inv_id, amount_rub, items_json, customer_json, pricing_json, shipment_tracking_url, shipment_tracking_sent_at, status_token, created_at, email_sent_at FROM orders WHERE inv_id = ? LIMIT 1",
     )
       .bind(invId)
       .first<OrderEmailData>();
   } catch (error) {
-    if (!isMissingColumnError(error, "email_sent_at") && !isMissingColumnError(error, "pricing_json")) {
+    if (
+      !isMissingColumnError(error, "email_sent_at")
+      && !isMissingColumnError(error, "pricing_json")
+      && !isMissingColumnError(error, "shipment_tracking_url")
+      && !isMissingColumnError(error, "shipment_tracking_sent_at")
+    ) {
       throw error;
     }
 
@@ -1679,6 +1931,8 @@ async function loadOrderEmailData(env: Env, invId: number): Promise<OrderEmailDa
     return {
       ...legacyOrder,
       pricing_json: null,
+      shipment_tracking_url: null,
+      shipment_tracking_sent_at: null,
       email_sent_at: null,
     };
   }
@@ -1694,6 +1948,22 @@ async function markOrderEmailSent(env: Env, orderId: string): Promise<void> {
       .run();
   } catch (error) {
     if (isMissingColumnError(error, "email_sent_at")) {
+      return;
+    }
+    throw error;
+  }
+}
+
+async function markOrderShipmentTrackingSent(env: Env, orderId: string): Promise<void> {
+  const now = nowIso();
+  try {
+    await env.DB.prepare(
+      "UPDATE orders SET shipment_tracking_sent_at = ?, updated_at = ? WHERE id = ?",
+    )
+      .bind(now, now, orderId)
+      .run();
+  } catch (error) {
+    if (isMissingColumnError(error, "shipment_tracking_sent_at")) {
       return;
     }
     throw error;
@@ -1782,6 +2052,75 @@ async function sendOrderPaidEmail(env: Env, order: OrderEmailData): Promise<bool
     subject: `Заказ #${order.inv_id}: оплата получена`,
     text: textParts.join("\n"),
     html,
+  };
+
+  const response = await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    console.error("Resend send failed", response.status, await response.text());
+    return false;
+  }
+
+  return true;
+}
+
+async function sendShipmentTrackingEmail(env: Env, order: OrderRecord): Promise<boolean> {
+  const apiKey = env.RESEND_API_KEY?.trim();
+  const from = env.RESEND_FROM?.trim();
+  if (!apiKey || !from) {
+    console.error("Resend config missing", {
+      hasApiKey: Boolean(apiKey),
+      hasFrom: Boolean(from),
+    });
+    return false;
+  }
+
+  const shipmentTrackingUrl = sanitizeTrackingUrl(order.shipment_tracking_url ?? undefined);
+  if (!shipmentTrackingUrl) {
+    return false;
+  }
+
+  const customer = parseCustomer(order.customer_json);
+  const customerEmail = customer?.email?.trim().toLowerCase() ?? "";
+  if (!isValidEmail(customerEmail)) {
+    return false;
+  }
+
+  const orderTrackingUrl = buildTrackingUrl(env, order.id, order.status_token);
+  const textParts = [
+    `Заказ #${order.inv_id} передан в доставку.`,
+    "",
+    `Ссылка для отслеживания отправления: ${shipmentTrackingUrl}`,
+    `Страница заказа: ${orderTrackingUrl}`,
+  ];
+
+  if (customer?.delivery) {
+    textParts.splice(3, 0, `Доставка: ${formatDeliverySummary(customer)}`);
+  }
+
+  textParts.push("", "Если нужно изменить данные доставки, просто ответьте на это письмо.");
+
+  const bcc = env.ORDERS_NOTIFICATION_EMAIL?.trim();
+  const payload = {
+    from,
+    to: [customerEmail],
+    bcc: bcc ? [bcc] : undefined,
+    reply_to: env.RESEND_REPLY_TO?.trim() || undefined,
+    subject: `Заказ #${order.inv_id}: отправление передано в доставку`,
+    text: textParts.join("\n"),
+    html: buildShipmentEmailHtml({
+      invId: order.inv_id,
+      customer,
+      shipmentTrackingUrl,
+      orderTrackingUrl,
+    }),
   };
 
   const response = await fetch("https://api.resend.com/emails", {
@@ -2635,6 +2974,7 @@ async function handleResult(request: Request, env: Env, executionContext: Execut
           pricing: parseOrderPricing(paidOrder.pricing_json),
           statusToken: paidOrder.status_token,
           createdAt: paidOrder.created_at,
+          shipmentTrackingUrl: paidOrder.shipment_tracking_url,
         });
         await notifyTelegramTargets(env, message);
       }
@@ -2666,6 +3006,8 @@ async function handleStatus(request: Request, env: Env): Promise<Response> {
       items_json: string;
       customer_json: string | null;
       pricing_json: string | null;
+      shipment_tracking_url: string | null;
+      shipment_tracking_sent_at: string | null;
       created_at: string;
       paid_at: string | null;
     }
@@ -2674,12 +3016,16 @@ async function handleStatus(request: Request, env: Env): Promise<Response> {
 
   try {
     order = await env.DB.prepare(
-      "SELECT id, inv_id, status, fulfillment_status, fulfillment_status_updated_at, amount_rub, items_json, customer_json, pricing_json, created_at, paid_at FROM orders WHERE id = ? AND status_token = ? LIMIT 1",
+      "SELECT id, inv_id, status, fulfillment_status, fulfillment_status_updated_at, amount_rub, items_json, customer_json, pricing_json, shipment_tracking_url, shipment_tracking_sent_at, created_at, paid_at FROM orders WHERE id = ? AND status_token = ? LIMIT 1",
     )
       .bind(orderId, token)
       .first<StatusOrderRow>();
   } catch (error) {
-    if (!isMissingColumnError(error, "pricing_json")) {
+    if (
+      !isMissingColumnError(error, "pricing_json")
+      && !isMissingColumnError(error, "shipment_tracking_url")
+      && !isMissingColumnError(error, "shipment_tracking_sent_at")
+    ) {
       throw error;
     }
 
@@ -2700,7 +3046,14 @@ async function handleStatus(request: Request, env: Env): Promise<Response> {
         paid_at: string | null;
       }>();
 
-    order = legacyOrder ? { ...legacyOrder, pricing_json: null } : null;
+    order = legacyOrder
+      ? {
+        ...legacyOrder,
+        pricing_json: null,
+        shipment_tracking_url: null,
+        shipment_tracking_sent_at: null,
+      }
+      : null;
   }
 
   if (!order) {
@@ -2747,6 +3100,8 @@ async function handleStatus(request: Request, env: Env): Promise<Response> {
     timeline,
     createdAt: order.created_at,
     paidAt: order.paid_at,
+    shipmentTrackingUrl: order.shipment_tracking_url,
+    shipmentTrackingSentAt: order.shipment_tracking_sent_at,
     vacationNotice: getVacationOrderNotice(order.created_at),
   });
 
@@ -2798,6 +3153,7 @@ async function handleAdminUpdateStatus(request: Request, env: Env): Promise<Resp
       pricing: parseOrderPricing(updateResult.order.pricing_json),
       statusToken: updateResult.order.status_token,
       createdAt: updateResult.order.created_at,
+      shipmentTrackingUrl: updateResult.order.shipment_tracking_url,
     });
     await notifyTelegramTargets(env, message);
   }
@@ -2818,7 +3174,8 @@ function getTelegramWebhookSecret(env: Env): string {
 
 function isTelegramAdminChat(env: Env, chatId: string): boolean {
   const admins = getTelegramAdminChatIds(env);
-  return admins.includes(chatId);
+  const groupId = getTelegramGroupId(env);
+  return admins.includes(chatId) || groupId === chatId;
 }
 
 function parseTelegramCommand(text: string): { command: string; args: string[] } {
@@ -2833,6 +3190,7 @@ function buildTelegramHelpMessage(): string {
     "/help - справка",
     "/order <id|invId> - показать заказ",
     "/status <id|invId> <pending_payment|paid|processing|shipped|delivered|completed|canceled> - сменить статус",
+    "/track <id|invId> <url> - сохранить трек-ссылку и отправить ее клиенту на email",
   ].join("\n");
 }
 
@@ -2856,8 +3214,55 @@ async function handleTelegramOrderCommand(env: Env, chatId: string, identifier: 
     pricing: parseOrderPricing(order.pricing_json),
     statusToken: order.status_token,
     createdAt: order.created_at,
+    shipmentTrackingUrl: order.shipment_tracking_url,
   });
   await sendTelegramMessage(env, chatId, message);
+}
+
+async function handleTelegramTrackCommand(env: Env, chatId: string, identifier: string, trackingUrlRaw: string): Promise<void> {
+  const shipmentTrackingUrl = sanitizeTrackingUrl(trackingUrlRaw);
+  if (!shipmentTrackingUrl) {
+    await sendTelegramMessage(env, chatId, "Некорректная ссылка. Использование: /track <id|invId> <https://...>");
+    return;
+  }
+
+  const order = await loadOrderRecordByIdentifier(env, identifier);
+  if (!order) {
+    await sendTelegramMessage(env, chatId, "Заказ не найден");
+    return;
+  }
+
+  const updateResult = await updateOrderShipmentTracking(env, order.id, shipmentTrackingUrl);
+  if (!updateResult) {
+    await sendTelegramMessage(env, chatId, "Не удалось сохранить трек-ссылку");
+    return;
+  }
+
+  const customer = parseCustomer(updateResult.order.customer_json);
+  const hasCustomerEmail = isValidEmail(customer?.email?.trim().toLowerCase() ?? "");
+  const resendConfigured = Boolean(env.RESEND_API_KEY?.trim() && env.RESEND_FROM?.trim());
+  const emailSent = await sendShipmentTrackingEmail(env, updateResult.order);
+  if (emailSent) {
+    await markOrderShipmentTrackingSent(env, updateResult.order.id);
+    updateResult.order.shipment_tracking_sent_at = nowIso();
+  }
+
+  const confirmation = [
+    "Трек-ссылка сохранена",
+    `Заказ #${updateResult.order.inv_id}`,
+    `Статус: ${formatFulfillmentStatus(normalizeFulfillmentStatus(updateResult.order.fulfillment_status))}`,
+    `Ссылка: ${shipmentTrackingUrl}`,
+    `Email клиенту: ${emailSent ? "отправлен" : !hasCustomerEmail ? "не указан email" : !resendConfigured ? "Resend не настроен" : "ошибка отправки"}`,
+  ].join("\n");
+  await sendTelegramMessage(env, chatId, confirmation);
+
+  const broadcast = [
+    `📦 ${emailSent ? "Трек отправлен клиенту" : "Трек добавлен в заказ"}`,
+    `Заказ #${updateResult.order.inv_id}`,
+    `Статус: ${formatFulfillmentStatus(normalizeFulfillmentStatus(updateResult.order.fulfillment_status))}`,
+    `Ссылка: ${shipmentTrackingUrl}`,
+  ].join("\n");
+  await notifyTelegramTargets(env, broadcast, chatId);
 }
 
 async function handleTelegramStatusCommand(env: Env, chatId: string, identifier: string, statusRaw: string): Promise<void> {
@@ -2903,6 +3308,7 @@ async function handleTelegramStatusCommand(env: Env, chatId: string, identifier:
     pricing: parseOrderPricing(updateResult.order.pricing_json),
     statusToken: updateResult.order.status_token,
     createdAt: updateResult.order.created_at,
+    shipmentTrackingUrl: updateResult.order.shipment_tracking_url,
   });
   await notifyTelegramTargets(env, broadcast, chatId);
 }
@@ -2965,6 +3371,17 @@ async function handleTelegramWebhook(request: Request, env: Env, pathname: strin
       return jsonResponse(request, env, { ok: true });
     }
     await handleTelegramStatusCommand(env, chatId, identifier, nextStatus);
+    return jsonResponse(request, env, { ok: true });
+  }
+
+  if (command === "/track") {
+    const identifier = args[0];
+    const trackingUrl = args[1];
+    if (!identifier || !trackingUrl) {
+      await sendTelegramMessage(env, chatId, "Использование: /track <id|invId> <https://...>");
+      return jsonResponse(request, env, { ok: true });
+    }
+    await handleTelegramTrackCommand(env, chatId, identifier, trackingUrl);
     return jsonResponse(request, env, { ok: true });
   }
 
